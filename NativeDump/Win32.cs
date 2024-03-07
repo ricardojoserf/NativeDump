@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Runtime.InteropServices;
 
 
@@ -37,10 +36,14 @@ namespace NativeDump
         [DllImport("ntdll.dll")]
         public static extern int NtClose(IntPtr hObject);
 
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern int RtlGetVersion(ref OSVERSIONINFOEX lpVersionInformation);
 
         [DllImport("advapi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, ref LUID lpLuid);
+        
+
         /*
         [DllImport("ntdll.dll")]
         public static extern int NtLookupPrivilegeValue(IntPtr PolicyHandle, ref UNICODE_STRING pString, ref LUID pLuid);
@@ -79,6 +82,7 @@ namespace NativeDump
         }
 
 
+        [StructLayout(LayoutKind.Sequential)]
         public struct MEMORY_BASIC_INFORMATION
         {
             public IntPtr BaseAddress;
@@ -111,13 +115,34 @@ namespace NativeDump
         }
 
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct OSVERSIONINFOEX
+        {
+            public int dwOSVersionInfoSize;
+            public int dwMajorVersion;
+            public int dwMinorVersion;
+            public int dwBuildNumber;
+            public int dwPlatformId;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string szCSDVersion;
+            public short wServicePackMajor;
+            public short wServicePackMinor;
+            public short wSuiteMask;
+            public byte wProductType;
+            public byte wReserved;
+        }
+
+
         ////////////// STRUCTS - Minidump file //////////
+        [StructLayout(LayoutKind.Sequential)]
         public struct Memory64Info
         {
             public IntPtr Address;
             public IntPtr Size;
         }
 
+
+        [StructLayout(LayoutKind.Sequential)]
         public struct MinidumpHeader
         {
             public uint Signature;
@@ -129,6 +154,8 @@ namespace NativeDump
             public IntPtr TimeDateStamp;
         }
 
+
+        [StructLayout(LayoutKind.Sequential)]
         public struct MinidumpStreamDirectoryEntry
         {
             public uint StreamType;
@@ -137,6 +164,7 @@ namespace NativeDump
         }
 
 
+        [StructLayout(LayoutKind.Sequential)]
         public struct SystemInfoStream
         {
             public ushort ProcessorArchitecture;
@@ -158,12 +186,14 @@ namespace NativeDump
         }
 
 
+        [StructLayout(LayoutKind.Sequential)]
         public struct ModuleListStream
         {
             public uint NumberOfModules;
         }
 
 
+        [StructLayout(LayoutKind.Sequential)]
         public struct ModuleInfo
         {
             public IntPtr BaseAddress;
@@ -184,6 +214,7 @@ namespace NativeDump
         }
 
 
+        [StructLayout(LayoutKind.Sequential)]
         public struct Padding
         {
             public uint pad;
@@ -197,6 +228,7 @@ namespace NativeDump
         }
 
 
+        [StructLayout(LayoutKind.Sequential)]
         public struct Memory64ListStream
         {
             public ulong NumberOfEntries;

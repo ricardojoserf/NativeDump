@@ -15,28 +15,28 @@ namespace NativeDump
             IntPtr tokenHandle = IntPtr.Zero;
             try
             {
-                // Obtiene el token de acceso del proceso actual
                 int result = NtOpenProcessToken(currentProcess, TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, ref tokenHandle);
                 if (result != 0)
                 {
                     throw new InvalidOperationException("Error al abrir el token de acceso.");
                 }
 
-                // Obtiene el LUID del privilegio SeDebugPrivilege
                 LUID luid = new LUID();
                 if (!LookupPrivilegeValue(null, SE_DEBUG_NAME, ref luid))
                 {
                     throw new InvalidOperationException("Error al obtener el LUID del privilegio SeDebugPrivilege.");
                 }
 
-                // Habilita el privilegio SeDebugPrivilege en el token
+
                 TOKEN_PRIVILEGES privileges = new TOKEN_PRIVILEGES
                 {
                     PrivilegeCount = 1,
                     Privileges = new LUID_AND_ATTRIBUTES[1]
                 };
+
                 privileges.Privileges[0].Luid = luid;
                 privileges.Privileges[0].Attributes = 0x00000002;
+                
                 if (NtAdjustPrivilegesToken(tokenHandle, false, ref privileges, (uint)Marshal.SizeOf(typeof(TOKEN_PRIVILEGES)), IntPtr.Zero, IntPtr.Zero) != 0)
                 {
                     throw new InvalidOperationException("Error al habilitar el privilegio SeDebugPrivilege.");
