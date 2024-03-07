@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 
@@ -8,22 +9,10 @@ namespace NativeDump
     {
         ///////////////// CONSTANTS /////////////////
         public const int MEM_COMMIT = 0x00001000;
-        public const int PAGE_READWRITE = 0x04;
         public const int PAGE_NOACCESS = 0x01;
         public const uint PROCESS_QUERY_INFORMATION = 0x0400;
         public const uint PROCESS_VM_READ = 0x0010;
-        public const int MAXIMUM_ALLOWED = 0x02000000;
-        public const uint GENERIC_ALL = 0x10000000;
-        public const uint FILE_SHARE_WRITE = 0x00000002;
-        public const uint CREATE_ALWAYS = 2;
-        public const uint FILE_ATTRIBUTE_NORMAL = 128;
         public const uint MemoryBasicInformation = 0;
-        public const uint OBJ_CASE_INSENSITIVE = 0x00000040;
-        public const uint FileAccess_FILE_GENERIC_WRITE = 0x120116;
-        public const uint FileAttributes_Normal = 128;
-        public const uint FileShare_Write = 2;
-        public const uint CreationDisposition_FILE_OVERWRITE_IF = 5;
-        public const uint CreateOptionFILE_SYNCHRONOUS_IO_NONALERT = 32;
         public const uint TOKEN_ADJUST_PRIVILEGES = 0x00000020;
         public const uint TOKEN_QUERY = 0x00000008;
         public const string SE_DEBUG_NAME = "SeDebugPrivilege";
@@ -42,6 +31,13 @@ namespace NativeDump
         [DllImport("ntdll.dll")]
         public static extern int NtOpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, ref IntPtr TokenHandle);
 
+        [DllImport("ntdll.dll")]
+        public static extern int NtAdjustPrivilegesToken(IntPtr TokenHandle, bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
+
+        [DllImport("ntdll.dll")]
+        public static extern int NtClose(IntPtr hObject);
+
+
         [DllImport("advapi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, ref LUID lpLuid);
@@ -49,12 +45,6 @@ namespace NativeDump
         [DllImport("ntdll.dll")]
         public static extern int NtLookupPrivilegeValue(IntPtr PolicyHandle, ref UNICODE_STRING pString, ref LUID pLuid);
         */
-
-        [DllImport("ntdll.dll")]
-        public static extern int NtAdjustPrivilegesToken(IntPtr TokenHandle, bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
-
-        [DllImport("ntdll.dll")]
-        public static extern int NtClose(IntPtr hObject);
 
         [DllImport("psapi.dll")]
         public static extern bool EnumProcessModulesEx(IntPtr hProcess, [Out] IntPtr[] lphModule, int cb, out uint lpcbNeeded, int dwFilterFlag);
@@ -71,12 +61,14 @@ namespace NativeDump
             public int HighPart;
         }
 
+
         [StructLayout(LayoutKind.Sequential)]
         public struct LUID_AND_ATTRIBUTES
         {
             public LUID Luid;
             public uint Attributes;
         }
+
 
         [StructLayout(LayoutKind.Sequential)]
         public struct TOKEN_PRIVILEGES
@@ -85,6 +77,7 @@ namespace NativeDump
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
             public LUID_AND_ATTRIBUTES[] Privileges;
         }
+
 
         public struct MEMORY_BASIC_INFORMATION
         {
@@ -97,12 +90,14 @@ namespace NativeDump
             public int Type;
         }
 
+
         [StructLayout(LayoutKind.Sequential)]
         public struct CLIENT_ID
         {
             public IntPtr UniqueProcess;
             public IntPtr UniqueThread;
         }
+
 
         [StructLayout(LayoutKind.Sequential, Pack = 0)]
         public struct OBJECT_ATTRIBUTES
@@ -115,11 +110,97 @@ namespace NativeDump
             public IntPtr SecurityQualityOfService;
         }
 
-        // Structs Minidump file
+
+        ////////////// STRUCTS - Minidump file //////////
         public struct Memory64Info
         {
             public IntPtr Address;
             public IntPtr Size;
+        }
+
+        public struct MinidumpHeader
+        {
+            public uint Signature;
+            public ushort Version;
+            public ushort ImplementationVersion;
+            public ushort NumberOfStreams;
+            public uint StreamDirectoryRva;
+            public uint CheckSum;
+            public IntPtr TimeDateStamp;
+        }
+
+        public struct MinidumpStreamDirectoryEntry
+        {
+            public uint StreamType;
+            public uint Size;
+            public uint Location;
+        }
+
+
+        public struct SystemInfoStream
+        {
+            public ushort ProcessorArchitecture;
+            public ushort ProcessorLevel;
+            public ushort ProcessorRevision;
+            public byte NumberOfProcessors;
+            public byte ProductType;
+            public uint MajorVersion;
+            public uint MinorVersion;
+            public uint BuildNumber;
+            public uint PlatformId;
+            public uint uint_unknown1;
+            public uint uint_unknown2;
+            public IntPtr ProcessorFeatures;
+            public IntPtr ProcessorFeatures2;
+            public uint uint_unknown3;
+            public ushort ushort_unknown4;
+            public byte byte_unknown5;
+        }
+
+
+        public struct ModuleListStream
+        {
+            public uint NumberOfModules;
+        }
+
+
+        public struct ModuleInfo
+        {
+            public IntPtr BaseAddress;
+            public uint Size;
+            public uint u1;
+            public uint Timestamp;
+            public uint PointerName;
+            public IntPtr u2;
+            public IntPtr u3;
+            public IntPtr u4;
+            public IntPtr u5;
+            public IntPtr u6;
+            public IntPtr u7;
+            public IntPtr u8;
+            public IntPtr u9;
+            public IntPtr u10;
+            public IntPtr u11;
+        }
+
+
+        public struct Padding
+        {
+            public uint pad;
+        }
+
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct UnicodeString
+        {
+            public uint UnicodeLength;
+        }
+
+
+        public struct Memory64ListStream
+        {
+            public ulong NumberOfEntries;
+            public uint MemoryRegionsBaseAddress;
         }
     }
 }
