@@ -39,13 +39,16 @@ namespace NativeDump
         [DllImport("ntdll.dll", SetLastError = true)]
         public static extern int RtlGetVersion(ref OSVERSIONINFOEX lpVersionInformation);
 
-        [DllImport("advapi32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern uint NtQueryInformationProcess(IntPtr processHandle, int processInformationClass, IntPtr pbi, uint processInformationLength, out uint returnLength);
+
+        [DllImport("advapi32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, ref LUID lpLuid);
 
+        /*
         [DllImport("psapi.dll", SetLastError = true)]
         public static extern uint GetModuleBaseName(IntPtr hProcess, IntPtr hModule, [Out] char[] lpBaseName, uint nSize);
-
+        */
 
         ///////////////// STRUCTS /////////////////
         [StructLayout(LayoutKind.Sequential)]
