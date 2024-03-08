@@ -27,7 +27,6 @@ namespace NativeDump
                     throw new InvalidOperationException("Error al obtener el LUID del privilegio SeDebugPrivilege.");
                 }
 
-
                 TOKEN_PRIVILEGES privileges = new TOKEN_PRIVILEGES
                 {
                     PrivilegeCount = 1,
@@ -49,28 +48,6 @@ namespace NativeDump
                     NtClose(tokenHandle);
                 }
             }
-        }
-
-
-        static IntPtr GetDllBaseAddress(IntPtr hProcess, string dll_name)
-        {
-            IntPtr[] modules = new IntPtr[1024];
-            uint numberOfModules;
-
-            EnumProcessModulesEx(hProcess, modules, modules.Length * IntPtr.Size, out numberOfModules, 3);
-            for (int i = 0; i < numberOfModules / IntPtr.Size; i++)
-            {
-                char[] moduleName = new char[1024];
-                GetModuleBaseName(hProcess, modules[i], moduleName, (uint)moduleName.Length);
-
-                string moduleNameStr = new string(moduleName);
-
-                if (moduleNameStr.ToLower().Contains(dll_name.ToLower()))
-                {
-                    return modules[i];
-                }
-            }
-            return IntPtr.Zero;
         }
 
 
@@ -106,16 +83,15 @@ namespace NativeDump
                 Environment.Exit(0);
             }
 
-            // Get lsasrv.dll base address
-            IntPtr lsasrvdll_address = GetDllBaseAddress(processHandle, "lsasrv.dll");
-
             // Loop the memory regions
             long proc_max_address_l = (long)0x7FFFFFFEFFFF;
             IntPtr aux_address = IntPtr.Zero;
             byte[] aux_bytearray = { };
             List<Memory64Info> mem64info_List = new List<Memory64Info>();
+            
+            // Get lsasrv.dll information
+            IntPtr lsasrvdll_address = IntPtr.Zero;
             int lsasrvdll_size = 0;
-            bool bool_test = false;
 
             while ((long)aux_address < proc_max_address_l)
             {
@@ -140,20 +116,17 @@ namespace NativeDump
                     Buffer.BlockCopy(buffer, 0, new_bytearray, aux_bytearray.Length, buffer.Length);
                     aux_bytearray = new_bytearray;
 
-                    // Calculate size of lsasrv.dll region
-                    if (mbi.BaseAddress == lsasrvdll_address)
-                    {
-                        bool_test = true;
-                    }
-                    if (bool_test == true) {
-                        if ((int)mbi.RegionSize == 0x1000 && mbi.BaseAddress != lsasrvdll_address)
-                        {
-                            bool_test = false;
+                    // Check if lsasrv.dll
+                    char[] moduleName = new char[1024];
+                    GetModuleBaseName(processHandle, mbi.AllocationBase, moduleName, (uint)moduleName.Length);
+                    string str = new string(moduleName);
+                    if (str.Contains("lsasrv")) {
+                        if (mbi.AllocationBase == mbi.BaseAddress) { 
+                            lsasrvdll_address = mbi.BaseAddress;
                         }
-                        else {
-                            lsasrvdll_size += (int)mbi.RegionSize;
-                        }
+                        lsasrvdll_size += (int)mbi.RegionSize;
                     }
+                    
                 }
                 // Next memory region
                 aux_address = (IntPtr)((ulong)aux_address + (ulong)mbi.RegionSize);
@@ -167,6 +140,8 @@ namespace NativeDump
             }
 
             // Generate Minidump file
+            Console.WriteLine("lsasrvdll_address:\t0x" + lsasrvdll_address.ToString("X"));
+            Console.WriteLine("lsasrvdll_size:   \t0x" + lsasrvdll_size.ToString("X"));
             CreateMinidump(lsasrvdll_address, lsasrvdll_size, mem64info_List, aux_bytearray, dumpfile);
 
             // Close process handle

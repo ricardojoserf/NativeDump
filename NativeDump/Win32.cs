@@ -42,15 +42,6 @@ namespace NativeDump
         [DllImport("advapi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, ref LUID lpLuid);
-        
-
-        /*
-        [DllImport("ntdll.dll")]
-        public static extern int NtLookupPrivilegeValue(IntPtr PolicyHandle, ref UNICODE_STRING pString, ref LUID pLuid);
-        */
-
-        [DllImport("psapi.dll")]
-        public static extern bool EnumProcessModulesEx(IntPtr hProcess, [Out] IntPtr[] lphModule, int cb, out uint lpcbNeeded, int dwFilterFlag);
 
         [DllImport("psapi.dll", SetLastError = true)]
         public static extern uint GetModuleBaseName(IntPtr hProcess, IntPtr hModule, [Out] char[] lpBaseName, uint nSize);
