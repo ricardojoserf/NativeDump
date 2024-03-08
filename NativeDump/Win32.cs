@@ -14,7 +14,6 @@ namespace NativeDump
         public const uint MemoryBasicInformation = 0;
         public const uint TOKEN_ADJUST_PRIVILEGES = 0x00000020;
         public const uint TOKEN_QUERY = 0x00000008;
-        public const string SE_DEBUG_NAME = "SeDebugPrivilege";
 
 
         ///////////////// FUNCTIONS /////////////////
@@ -42,10 +41,10 @@ namespace NativeDump
         [DllImport("ntdll.dll", SetLastError = true)]
         public static extern uint NtQueryInformationProcess(IntPtr processHandle, int processInformationClass, IntPtr pbi, uint processInformationLength, out uint returnLength);
 
-        [DllImport("advapi32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)]
+        /*
+        [DllImport("advapi32.dll", SetLastError = true)][return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, ref LUID lpLuid);
 
-        /*
         [DllImport("psapi.dll", SetLastError = true)]
         public static extern uint GetModuleBaseName(IntPtr hProcess, IntPtr hModule, [Out] char[] lpBaseName, uint nSize);
         */
@@ -60,19 +59,11 @@ namespace NativeDump
 
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct LUID_AND_ATTRIBUTES
-        {
-            public LUID Luid;
-            public uint Attributes;
-        }
-
-
-        [StructLayout(LayoutKind.Sequential)]
         public struct TOKEN_PRIVILEGES
         {
             public uint PrivilegeCount;
-            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
-            public LUID_AND_ATTRIBUTES[] Privileges;
+            public LUID Luid;
+            public uint Attributes;
         }
 
 

