@@ -6,6 +6,7 @@ using static NativeDump.Win32;
 using static NativeDump.CreateFile;
 //using static NativeDump.FromDisk;
 
+
 namespace NativeDump
 {
     internal class Program

@@ -58,7 +58,7 @@ namespace NativeDump
             MinidumpStreamDirectoryEntry minidumpStreamDirectoryEntry_3 = new MinidumpStreamDirectoryEntry();
             minidumpStreamDirectoryEntry_3.StreamType = 9;
             minidumpStreamDirectoryEntry_3.Size = (uint)(16 + 16 * mem64info_List.Count);
-            minidumpStreamDirectoryEntry_3.Location = 0x0130;
+            minidumpStreamDirectoryEntry_3.Location = 0x12A;
             
             // SystemInfoStream
             SystemInfoStream systemInfoStream = new SystemInfoStream();
@@ -71,21 +71,18 @@ namespace NativeDump
             // ModuleList
             ModuleListStream moduleListStream = new ModuleListStream();
             moduleListStream.NumberOfModules = 1;
-            ModuleInfo moduleInfo = new ModuleInfo();
-            moduleInfo.BaseAddress = lsasrvdll_address;
-            moduleInfo.Size = (uint)lsasrvdll_size; //0x1a3000;
-            moduleInfo.PointerName = 0xEC;
-            // ModuleList - Padding
-            Padding padding = new Padding();
+            moduleListStream.BaseAddress = lsasrvdll_address;
+            moduleListStream.Size = (uint)lsasrvdll_size;
+            moduleListStream.PointerName = 0xE8;
             // ModuleList - Unicode string
-            UnicodeString unicodeString = new UnicodeString();
-            string dll_name = "C:\\Windows\\System32\\lsasrv.dll";
-            unicodeString.UnicodeLength = (uint)(dll_name.Length * 2);
-            byte[] dll_byte_array = Encoding.Unicode.GetBytes(dll_name); ;
-            
+            string dll_str = "C:\\Windows\\System32\\lsasrv.dll";    
+            CUSTOM_UNICODE_STRING dllName = new CUSTOM_UNICODE_STRING();
+            dllName.Length = (uint)(dll_str.Length * 2);
+            dllName.Buffer = dll_str;
+
             // Memory64List
             int number_of_entries = mem64info_List.Count;
-            int offset_mem_regions = 0x130 + 16 + (16 * number_of_entries);
+            int offset_mem_regions = 0x12A + 16 + (16 * number_of_entries);
             Memory64ListStream memory64ListStream = new Memory64ListStream();
             memory64ListStream.NumberOfEntries = (ulong)number_of_entries;
             memory64ListStream.MemoryRegionsBaseAddress = (uint)offset_mem_regions;
@@ -100,7 +97,7 @@ namespace NativeDump
             byte[] header_byte_arr = StructToByteArray(header);
             byte[] streamDirectory_byte_arr = JoinByteArrays(StructToByteArray(minidumpStreamDirectoryEntry_1), StructToByteArray(minidumpStreamDirectoryEntry_2), StructToByteArray(minidumpStreamDirectoryEntry_3));
             byte[] systemInfoStream_byte_arr = StructToByteArray(systemInfoStream);
-            byte[] moduleListStream_byte_arr = JoinByteArrays(StructToByteArray(moduleListStream), StructToByteArray(moduleInfo), StructToByteArray(padding), StructToByteArray(unicodeString), dll_byte_array, StructToByteArray(padding));
+            byte[] moduleListStream_byte_arr = JoinByteArrays(StructToByteArray(moduleListStream), StructToByteArray(dllName));
             byte[] minidumpFile = JoinByteArrays(header_byte_arr, streamDirectory_byte_arr, systemInfoStream_byte_arr, moduleListStream_byte_arr, memory64ListStream_byte_arr, memoryRegions_byte_arr);
 
             // Save to file

@@ -41,14 +41,7 @@ namespace NativeDump
         [DllImport("ntdll.dll", SetLastError = true)]
         public static extern uint NtQueryInformationProcess(IntPtr processHandle, int processInformationClass, IntPtr pbi, uint processInformationLength, out uint returnLength);
 
-        /*
-        [DllImport("advapi32.dll", SetLastError = true)][return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, ref LUID lpLuid);
-
-        [DllImport("psapi.dll", SetLastError = true)]
-        public static extern uint GetModuleBaseName(IntPtr hProcess, IntPtr hModule, [Out] char[] lpBaseName, uint nSize);
-        */
-
+        
         ///////////////// STRUCTS /////////////////
         [StructLayout(LayoutKind.Sequential)]
         public struct LUID
@@ -149,6 +142,15 @@ namespace NativeDump
         }
 
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 2)]
+        public struct CUSTOM_UNICODE_STRING
+        {
+            public uint Length;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 31)]
+            public string Buffer;
+        }
+
+
         [StructLayout(LayoutKind.Sequential)]
         public struct SystemInfoStream
         {
@@ -161,55 +163,35 @@ namespace NativeDump
             public uint MinorVersion;
             public uint BuildNumber;
             public uint PlatformId;
-            public uint uint_unknown1;
-            public uint uint_unknown2;
+            public uint UnknownField1;
+            public uint UnknownField2;
             public IntPtr ProcessorFeatures;
             public IntPtr ProcessorFeatures2;
-            public uint uint_unknown3;
-            public ushort ushort_unknown4;
-            public byte byte_unknown5;
+            public uint UnknownField3;
+            public ushort UnknownField14;
+            public byte UnknownField15;
         }
 
 
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential, Pack = 2)]
         public struct ModuleListStream
         {
             public uint NumberOfModules;
-        }
-
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct ModuleInfo
-        {
             public IntPtr BaseAddress;
             public uint Size;
-            public uint u1;
+            public uint UnknownField1;
             public uint Timestamp;
             public uint PointerName;
-            public IntPtr u2;
-            public IntPtr u3;
-            public IntPtr u4;
-            public IntPtr u5;
-            public IntPtr u6;
-            public IntPtr u7;
-            public IntPtr u8;
-            public IntPtr u9;
-            public IntPtr u10;
-            public IntPtr u11;
-        }
-
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct Padding
-        {
-            public uint pad;
-        }
-
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        public struct UnicodeString
-        {
-            public uint UnicodeLength;
+            public IntPtr UnknownField2;
+            public IntPtr UnknownField3;
+            public IntPtr UnknownField4;
+            public IntPtr UnknownField5;
+            public IntPtr UnknownField6;
+            public IntPtr UnknownField7;
+            public IntPtr UnknownField8;
+            public IntPtr UnknownField9;
+            public IntPtr UnknownField10;
+            public IntPtr UnknownField11;
         }
 
 
