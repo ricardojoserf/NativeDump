@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Linq;

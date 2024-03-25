@@ -21,22 +21,22 @@ namespace NativeDump
         public static extern uint NtOpenProcess(ref IntPtr ProcessHandle, uint DesiredAccess, ref OBJECT_ATTRIBUTES ObjectAttributes, ref CLIENT_ID processId);
 
         [DllImport("ntdll.dll")]
-        public static extern bool NtReadVirtualMemory(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out IntPtr lpNumberOfBytesRead);
+        public static extern uint NtReadVirtualMemory(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out IntPtr lpNumberOfBytesRead);
 
         [DllImport("ntdll.dll")]
         public static extern uint NtQueryVirtualMemory(IntPtr hProcess, IntPtr lpAddress, uint MemoryInformationClass, out MEMORY_BASIC_INFORMATION MemoryInformation, uint MemoryInformationLength, out uint ReturnLength);
         
         [DllImport("ntdll.dll")]
-        public static extern int NtOpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, ref IntPtr TokenHandle);
+        public static extern uint NtOpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, ref IntPtr TokenHandle);
 
         [DllImport("ntdll.dll")]
-        public static extern int NtAdjustPrivilegesToken(IntPtr TokenHandle, bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
+        public static extern uint NtAdjustPrivilegesToken(IntPtr TokenHandle, bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
 
         [DllImport("ntdll.dll")]
-        public static extern int NtClose(IntPtr hObject);
+        public static extern uint NtClose(IntPtr hObject);
 
         [DllImport("ntdll.dll", SetLastError = true)]
-        public static extern int RtlGetVersion(ref OSVERSIONINFOEX lpVersionInformation);
+        public static extern uint RtlGetVersion(ref OSVERSIONINFOEX lpVersionInformation);
 
         [DllImport("ntdll.dll", SetLastError = true)]
         public static extern uint NtQueryInformationProcess(IntPtr processHandle, int processInformationClass, IntPtr pbi, uint processInformationLength, out uint returnLength);
