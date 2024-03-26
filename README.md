@@ -33,10 +33,10 @@ The project has two branches at the moment apart from the main one:
 
 After reading Minidump undocumented structures, its structure can be summed up to:
 
-- Header: Information like the Signature ("MDMP"), the location of the Stream Directory and the number of streams. 
-- Stream Directory: One entry for each stream, containing the type, total size and location in the file of each one. 
-- Streams: Every stream contains different information related to the process and has its own format.
-- Regions: The actual bytes from the process from each memory region which can be read. 
+- Header: Information like the Signature ("MDMP"), the location of the Stream Directory and the number of streams
+- Stream Directory: One entry for each stream, containing the type, total size and location in the file of each one 
+- Streams: Every stream contains different information related to the process and has its own format
+- Regions: The actual bytes from the process from each memory region which can be read
 
 ![estructure](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/minidump_structure.png)
 
@@ -140,7 +140,7 @@ public struct SystemInformationStream
 
 The required values are:
 - ProcessorArchitecture: 9 for 64-bit and 0 for 32-bit Windows systems
-- Major version, Minor version and the BuildNumber: Hardcoded or obtained through kernel32!GetVersionEx or ntdll!RtlGetVersion (we will use the latter).
+- Major version, Minor version and the BuildNumber: Hardcoded or obtained through kernel32!GetVersionEx or ntdll!RtlGetVersion (we will use the latter)
 
 ---------------------
 
