@@ -224,8 +224,8 @@ The required values are:
 
 There are pre-requisites to loop the memory regions of the lsass.exe process which can be solved using only NTAPIs:
 
-1. Obtain the "SeDebugPrivilege" permission. Instead of the typical Advapi!OpenProcessToken, Advapi!LookupPrivilegeValue and Advapi!AdjustTokenPrivilege use ntdll!NtOpenProcessToken, ntdll!NtAdjustPrivilegesToken and the hardcoded value of 20 for the Luid (constant in all latest Windows versions afaik)
-2. Obtain the process ID. For example, loop all processes using ntdll!NtGetNextProcess, obtain the PEB address with ntdll!NtQueryInformationProcess and use ntdll!NtReadVirtualMemory to read the ImagePathName field inside ProcessParameters
+1. Obtain the "SeDebugPrivilege" permission. Instead of the typical Advapi!OpenProcessToken, Advapi!LookupPrivilegeValue and Advapi!AdjustTokenPrivilege, we will use ntdll!NtOpenProcessToken, ntdll!NtAdjustPrivilegesToken and the hardcoded value of 20 for the Luid (which is constant in all latest Windows versions)
+2. Obtain the process ID. For example, loop all processes using ntdll!NtGetNextProcess, obtain the PEB address with ntdll!NtQueryInformationProcess and use ntdll!NtReadVirtualMemory to read the ImagePathName field inside ProcessParameters. To avoid overcomplicating the PoC, we will use .NET's Process.GetProcessesByName(<PROCESS_NAME>)
 3. Open a process handle. Use ntdll!OpenProcess with permissions PROCESS_QUERY_INFORMATION (0x0400) to retrieve process information and PROCESS_VM_READ (0x0010) to read the memory bytes
 
 With this it is possible to traverse process memory by calling:
