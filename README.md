@@ -28,7 +28,7 @@ Some benefits of this technique are:
 - It only uses functions from Ntdll.dll, so it is possible to bypass API hooking by remapping the library
 - The Minidump file does not have to be written to disk, you can transfer its bytes (encoded or encrypted) to a remote machine
 
-The project has two branches at the moment apart from the main one:
+The project has three branches at the moment (apart from the main branch with the basic technique):
 
 - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll's ".text" section using a clean version from the DLL file already on disk
 
