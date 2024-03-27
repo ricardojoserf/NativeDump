@@ -9,7 +9,15 @@ NativeDump allows to dump the lsass process using only NTAPIs generating a Minid
 - NtQueryInformationProcess and NtReadVirtualMemory to get the lsasrv.dll address. This is the only module necessary for the ModuleList Stream
 - NtOpenProcess to get a handle for the lsass process
 - NtQueryVirtualMemory and NtReadVirtualMemory to loop through the memory regions and dump all possible ones. At the same time it populates the Memory64List Stream
+<br>
 
+Usage:
+
+```
+NativeDump.exe [DUMP_FILE]
+```
+
+The default file name is "proc_<PID>.dmp":
 
 ![poc](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_1.png)
 
@@ -25,6 +33,8 @@ The project has two branches at the moment apart from the main one:
 - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll's ".text" section using a clean version from the DLL file already on disk
 
 - [delegates](https://github.com/ricardojoserf/NativeDump/tree/delegates) - Overwrite ntdll.dll + Dynamic function resolution + String encryption using AES
+
+- [transfer](https://github.com/ricardojoserf/NativeDump/tree/transfer) - Overwrite ntdll.dll + Dynamic function resolution + String encryption using AES + Send file to remote machine
 
 <br>
 
