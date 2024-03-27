@@ -16,32 +16,17 @@ namespace NativeDump
         public const uint TOKEN_QUERY = 0x00000008;
 
 
-        ///////////////// FUNCTIONS /////////////////
-        [DllImport("ntdll.dll")]
-        public static extern uint NtOpenProcess(ref IntPtr ProcessHandle, uint DesiredAccess, ref OBJECT_ATTRIBUTES ObjectAttributes, ref CLIENT_ID processId);
+        //////////// FUNCTIONS DELEGATES ////////////
+        public delegate uint NtOpenProcessDelegate(ref IntPtr ProcessHandle, uint DesiredAccess, ref OBJECT_ATTRIBUTES ObjectAttributes, ref CLIENT_ID processId);
+        public delegate uint NtReadVirtualMemoryDelegate(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out IntPtr lpNumberOfBytesRead);
+        public delegate uint NtQueryVirtualMemoryDelegate(IntPtr hProcess, IntPtr lpAddress, uint MemoryInformationClass, out MEMORY_BASIC_INFORMATION MemoryInformation, uint MemoryInformationLength, out uint ReturnLength);
+        public delegate uint NtOpenProcessTokenDelegate(IntPtr ProcessHandle, uint DesiredAccess, ref IntPtr TokenHandle);
+        public delegate uint NtAdjustPrivilegesTokenDelegate(IntPtr TokenHandle, bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
+        public delegate uint NtCloseDelegate(IntPtr hObject);
+        public delegate uint RtlGetVersionDelegate(ref OSVERSIONINFOEX lpVersionInformation);
+        public delegate uint NtQueryInformationProcessDelegate(IntPtr processHandle, int processInformationClass, IntPtr pbi, uint processInformationLength, out uint returnLength);
 
-        [DllImport("ntdll.dll")]
-        public static extern uint NtReadVirtualMemory(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out IntPtr lpNumberOfBytesRead);
 
-        [DllImport("ntdll.dll")]
-        public static extern uint NtQueryVirtualMemory(IntPtr hProcess, IntPtr lpAddress, uint MemoryInformationClass, out MEMORY_BASIC_INFORMATION MemoryInformation, uint MemoryInformationLength, out uint ReturnLength);
-        
-        [DllImport("ntdll.dll")]
-        public static extern uint NtOpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, ref IntPtr TokenHandle);
-
-        [DllImport("ntdll.dll")]
-        public static extern uint NtAdjustPrivilegesToken(IntPtr TokenHandle, bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, uint BufferLength, IntPtr PreviousState, IntPtr ReturnLength);
-
-        [DllImport("ntdll.dll")]
-        public static extern uint NtClose(IntPtr hObject);
-
-        [DllImport("ntdll.dll", SetLastError = true)]
-        public static extern uint RtlGetVersion(ref OSVERSIONINFOEX lpVersionInformation);
-
-        [DllImport("ntdll.dll", SetLastError = true)]
-        public static extern uint NtQueryInformationProcess(IntPtr processHandle, int processInformationClass, IntPtr pbi, uint processInformationLength, out uint returnLength);
-
-        
         ///////////////// STRUCTS /////////////////
         [StructLayout(LayoutKind.Sequential)]
         public struct LUID

