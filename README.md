@@ -32,9 +32,9 @@ The project has three branches at the moment (apart from the main branch with th
 
 - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll's ".text" section using a clean version from the DLL file already on disk
 
-- [delegates](https://github.com/ricardojoserf/NativeDump/tree/delegates) - Overwrite ntdll.dll + Dynamic function resolution + String encryption using AES
+- [delegates](https://github.com/ricardojoserf/NativeDump/tree/delegates) - Overwrite ntdll.dll + Dynamic function resolution + String encryption with AES  + XOR-encoding
 
-- [transfer](https://github.com/ricardojoserf/NativeDump/tree/transfer) - Overwrite ntdll.dll + Dynamic function resolution + String encryption using AES + Send file to remote machine
+- [remote](https://github.com/ricardojoserf/NativeDump/tree/remote) - Overwrite ntdll.dll + Dynamic function resolution + String encryption with AES + Send file to remote machine + XOR-encoding
 
 <br>
 
@@ -243,5 +243,11 @@ With this it is possible to traverse process memory by calling:
     - If the memory protection is not PAGE_NOACCESS (0x01) and the memory state is MEM_COMMIT (0x1000), meaning it is accessible and committed, the base address and size populates one entry of the Memory64List stream and bytes can be added to the file
     - If the base address equals lsasrv.dll base address, it is used to calculate the size of lsasrv.dll in memory
 - ntdll!NtReadVirtualMemory: Add bytes of that region to the Minidump file after the Memory64List Stream
+
+---------------------
+
+#### G. Creating Minidump file
+
+After previous steps we have all that is necessary to create the Minidump file. We can create a file locally or send the bytes to a remote machine, with the possibility of encoding or encrypting the bytes before. Some of these possibilities are coded in the [delegates branch](https://github.com/ricardojoserf/NativeDump/tree/delegates), where the file created locally can be encoded with XOR, and in the [remote branch](https://github.com/ricardojoserf/NativeDump/tree/remote), where the file can be encoded with XOR before being sent to a remote machine.
 
 <br>
