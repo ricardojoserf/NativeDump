@@ -142,15 +142,6 @@ namespace NativeDump
         }
 
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 2)]
-        public struct CUSTOM_UNICODE_STRING
-        {
-            public uint Length;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 31)]
-            public string Buffer;
-        }
-
-
         [StructLayout(LayoutKind.Sequential)]
         public struct SystemInfoStream
         {
@@ -177,6 +168,11 @@ namespace NativeDump
         public struct ModuleListStream
         {
             public uint NumberOfModules;
+            // public ModuleInfo[] Modules;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 2)]
+        public struct ModuleInfoStruct {
             public IntPtr BaseAddress;
             public uint Size;
             public uint UnknownField1;
@@ -192,6 +188,7 @@ namespace NativeDump
             public IntPtr UnknownField9;
             public IntPtr UnknownField10;
             public IntPtr UnknownField11;
+            // public uint UnknownField12;
         }
 
 
