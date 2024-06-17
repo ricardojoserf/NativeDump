@@ -36,6 +36,8 @@ The project has three branches at the moment (apart from the main branch with th
 
 - [remote](https://github.com/ricardojoserf/NativeDump/tree/remote) - Overwrite ntdll.dll + Dynamic function resolution + String encryption with AES + Send file to remote machine + XOR-encoding
 
+- [all-modules](https://github.com/ricardojoserf/NativeDump/tree/all-modules) - Get the information for all modules (not only lsasrv.dll)
+
 <br>
 
 
