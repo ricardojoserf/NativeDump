@@ -27,7 +27,7 @@ Some benefits of this technique are:
 - The Minidump file does not have to be written to disk, you can transfer its bytes (encoded or encrypted) to a remote machine
 - It seems it is not necessary to obtain the "SeDebugPrivilege" privilege using this technique
 
-The project has three branches at the moment (apart from the main branch with the basic technique):
+The project has five branches at the moment (apart from the main branch with the basic technique):
 
 - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll's ".text" section using a clean version from the DLL file already on disk
 
@@ -37,7 +37,7 @@ The project has three branches at the moment (apart from the main branch with th
 
 - [all-modules](https://github.com/ricardojoserf/NativeDump/tree/all-modules) - Get the information for all modules (not only lsasrv.dll)
 
-- [python-flavour](https://github.com/ricardojoserf/NativeDump/tree/python-flavour) - Python implementation of this technique
+- [python-flavour](https://github.com/ricardojoserf/NativeDump/tree/python-flavour) - Python implementation with ntdll.dll overwrite + Exfiltrate file to remote machine 
 
 <br>
 
