@@ -21,6 +21,12 @@ As an alternative, you can compile it to a single binary using pyinstaller with 
 pyinstaller -F nativedump.py
 ```
 
+Or using Nuitka with the "--onefile" flag:
+
+```
+nuitka --onefile nativedump.py
+```
+
 ![pythonexample](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Python2.png)
 
 
