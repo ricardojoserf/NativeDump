@@ -9,7 +9,7 @@ This branch implements the same functionality as the main branch using Golang:
 You can run it as a script:
 
 ```
-go build nativedump.go [-o OPTION] [-k PATH] [-i IP_ADDRESS] [-p PORT_ADDRESS]
+go run nativedump.go [-o OPTION] [-k PATH] [-i IP_ADDRESS] [-p PORT_ADDRESS]
 ```
 
 ![golang1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Golang1.png)
