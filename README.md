@@ -2,12 +2,14 @@
 
 NativeDump allows to dump the lsass process using only NTAPIs generating a Minidump file with only the streams needed to be parsed by tools like Mimikatz or Pypykatz (SystemInfo, ModuleList and Memory64List Streams).
 
-![esquema](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/esquema2_nativedump.png)
+![esquema](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/nativedump_esquema.png)
 
+- NTOpenProcessToken and NtAdjustPrivilegeToken to get the "SeDebugPrivilege" privilege
 - RtlGetVersion to get the Operating System version details (Major version, minor version and build number). This is necessary for the SystemInfo Stream
-- NtOpenProcess to get a handle for the lsass process
 - NtQueryInformationProcess and NtReadVirtualMemory to get the lsasrv.dll address. This is the only module necessary for the ModuleList Stream
+- NtOpenProcess to get a handle for the lsass process
 - NtQueryVirtualMemory and NtReadVirtualMemory to loop through the memory regions and dump all possible ones. At the same time it populates the Memory64List Stream
+
 
 <br>
 
@@ -25,9 +27,8 @@ Some benefits of this technique are:
 - It does not use the well-known dbghelp!MinidumpWriteDump function
 - It only uses functions from Ntdll.dll, so it is possible to bypass API hooking by remapping the library
 - The Minidump file does not have to be written to disk, you can transfer its bytes (encoded or encrypted) to a remote machine
-- It seems it is not necessary to obtain the "SeDebugPrivilege" privilege using this technique
 
-The project has five branches at the moment (apart from the main branch with the basic technique):
+The project has six branches at the moment (apart from the main branch with the basic technique):
 
 - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll's ".text" section using a clean version from the DLL file already on disk
 
@@ -38,6 +39,8 @@ The project has five branches at the moment (apart from the main branch with the
 - [all-modules](https://github.com/ricardojoserf/NativeDump/tree/all-modules) - Get the information for all modules (not only lsasrv.dll)
 
 - [python-flavour](https://github.com/ricardojoserf/NativeDump/tree/python-flavour) - Python implementation with ntdll.dll overwrite + Exfiltrate file to remote machine 
+
+- [golang-flavour](https://github.com/ricardojoserf/NativeDump/tree/golang-flavour) - Golang implementation with ntdll.dll overwrite + Exfiltrate file to remote machine 
 
 <br>
 
@@ -237,8 +240,9 @@ The required values are:
 
 There are pre-requisites to loop the memory regions of the lsass.exe process which can be solved using only NTAPIs:
 
-1. Obtain the process ID. For example, loop all processes using ntdll!NtGetNextProcess, obtain the PEB address with ntdll!NtQueryInformationProcess and use ntdll!NtReadVirtualMemory to read the ImagePathName field inside ProcessParameters. To avoid overcomplicating the PoC, we will use .NET's Process.GetProcessesByName(<PROCESS_NAME>)
-2. Open a process handle. Use ntdll!OpenProcess with permissions PROCESS_QUERY_INFORMATION (0x0400) to retrieve process information and PROCESS_VM_READ (0x0010) to read the memory bytes
+1. Obtain the "SeDebugPrivilege" permission. Instead of the typical Advapi!OpenProcessToken, Advapi!LookupPrivilegeValue and Advapi!AdjustTokenPrivilege, we will use ntdll!NtOpenProcessToken, ntdll!NtAdjustPrivilegesToken and the hardcoded value of 20 for the Luid (which is constant in all latest Windows versions)
+2. Obtain the process ID. For example, loop all processes using ntdll!NtGetNextProcess, obtain the PEB address with ntdll!NtQueryInformationProcess and use ntdll!NtReadVirtualMemory to read the ImagePathName field inside ProcessParameters. To avoid overcomplicating the PoC, we will use .NET's Process.GetProcessesByName(<PROCESS_NAME>)
+3. Open a process handle. Use ntdll!OpenProcess with permissions PROCESS_QUERY_INFORMATION (0x0400) to retrieve process information and PROCESS_VM_READ (0x0010) to read the memory bytes
 
 With this it is possible to traverse process memory by calling:
 - ntdll!NtQueryVirtualMemory: Return a MEMORY_BASIC_INFORMATION structure with the protection type, state, base address and size of each memory region
