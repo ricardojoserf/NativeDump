@@ -1,6 +1,6 @@
-# NativeDump - "python-flavour" branch
+# NativeDump - "golang-flavour" branch
 
-This branch implements the same functionality as the main branch using Python3: 
+This branch implements the same functionality as the main branch using Golang: 
 
 - Minidump file generation using only NTAPIS
 - Overwrite the Ntdll.dll library (Optional)
@@ -9,19 +9,19 @@ This branch implements the same functionality as the main branch using Python3:
 You can run it as a script:
 
 ```
-python nativedump.py [-o OPTION] [-k PATH] [-i IP_ADDRESS] [-p PORT_ADDRESS]
+go build nativedump.go [-o OPTION] [-k PATH] [-i IP_ADDRESS] [-p PORT_ADDRESS]
 ```
 
-![pythonexample](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Python1.png)
+![golang1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Golang1.png)
 
 
-As an alternative, you can compile it to a single binary using pyinstaller with the "-F" flag:
+As an alternative, you can compile it to a binary using "go build":
 
  ```
-pyinstaller -F nativedump.py
+go build && nativedump.exe
 ```
 
-![pythonexample](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Python2.png)
+![golang2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Golang2.png)
 
 
 You can use the *-o* parameter for overwriting the ntdll.dll library:
@@ -33,8 +33,8 @@ You can use *-i* (IP address) and *-p* (port) parameters to exfiltrate the file 
 
 In this example, the ntdll.dll library is overwritten from a debug process, the Minidump file is generated and exfiltrated to 192.168.1.72:1234:
 
-![ntdlloverwrite](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Python3.png)
+![ntdlloverwrite](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Golang3.png)
 
 The Netcat listener receives the file correctly:
 
-![dumpfile](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Python4.png)
+![dumpfile](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Golang4.png)
