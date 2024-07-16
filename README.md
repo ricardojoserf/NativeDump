@@ -15,14 +15,13 @@ go run nativedump.go [-o OPTION] [-k PATH] [-i IP_ADDRESS] [-p PORT_ADDRESS]
 ![golang1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Golang1.png)
 
 
-As an alternative, you can compile it to a binary using "go build":
+As an alternative, you can compile it to a binary:
 
  ```
-go build && nativedump.exe
+go build
 ```
 
 ![golang2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_Golang2.png)
-
 
 You can use the *-o* parameter for overwriting the ntdll.dll library:
 - "disk": Using a DLL already on disk. If *-k* parameter is not used the path is "C:\Windows\System32\ntdll.dll".
