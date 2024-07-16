@@ -21,26 +21,26 @@ NativeDump.exe [DUMP_FILE]
 
 ![poc](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_1.png)
 
-The tool has been tested against Windows 10 and 11 devices with the most common security solutions (Microsoft Defender for Endpoints, Crowdstrike...) and is for now undetected. However, it does not work if PPL is enabled in the system.
+The tool has been tested against Windows 10 and 11 devices with the most common security solutions (Microsoft Defender for Endpoints, Crowdstrike...) and is for now undetected. However, it does not work if PPL is enabled or PEB structure is not readable.
 
 Some benefits of this technique are:
 - It does not use the well-known dbghelp!MinidumpWriteDump function
 - It only uses functions from Ntdll.dll, so it is possible to bypass API hooking by remapping the library
 - The Minidump file does not have to be written to disk, you can transfer its bytes (encoded or encrypted) to a remote machine
 
-The project has six branches at the moment (apart from the main branch with the basic technique):
+The project has six branches:
 
-- [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll's ".text" section using a clean version from the DLL file already on disk
+- [main](https://github.com/ricardojoserf/NativeDump/tree/main) - This branch, with the basic implementation in .NET
 
-- [delegates](https://github.com/ricardojoserf/NativeDump/tree/delegates) - Overwrite ntdll.dll + Dynamic function resolution + String encryption with AES  + XOR-encoding
+- [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll library using a clean version from a DLL file already on disk
 
-- [remote](https://github.com/ricardojoserf/NativeDump/tree/remote) - Overwrite ntdll.dll + Dynamic function resolution + String encryption with AES + Send file to remote machine + XOR-encoding
+- [remote](https://github.com/ricardojoserf/NativeDump/tree/remote) - Overwrite ntdll.dll + Dynamic function resolution + String AES encryption + XOR-encoding + Exfiltrate to remote machine
 
 - [all-modules](https://github.com/ricardojoserf/NativeDump/tree/all-modules) - Get the information for all modules (not only lsasrv.dll)
 
-- [python-flavour](https://github.com/ricardojoserf/NativeDump/tree/python-flavour) - Python implementation with ntdll.dll overwrite + Exfiltrate file to remote machine 
+- [python-flavour](https://github.com/ricardojoserf/NativeDump/tree/python-flavour) - Python implementation with 3 ntdll.dll overwrite methods + Exfiltrate to remote machine 
 
-- [golang-flavour](https://github.com/ricardojoserf/NativeDump/tree/golang-flavour) - Golang implementation with ntdll.dll overwrite + Exfiltrate file to remote machine 
+- [golang-flavour](https://github.com/ricardojoserf/NativeDump/tree/golang-flavour) - Golang implementation with 3 ntdll.dll overwrite methods + Exfiltrate to remote machine 
 
 <br>
 
@@ -56,9 +56,7 @@ After reading Minidump undocumented structures, its structure can be summed up t
 
 ![estructure](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/minidump_structure.png)
 
-I created a parsing tool which can be helpful: [MinidumpParser](https://github.com/ricardojoserf/MinidumpParser).
-
-We will focus on creating a valid file with only the necessary values for the header, stream directory and the only 3 streams needed for a Minidump file to be parsed by Mimikatz/Pypykatz: SystemInfo, ModuleList and Memory64List Streams.
+I created a parsing tool which can be helpful: [MinidumpParser](https://github.com/ricardojoserf/MinidumpParser). We will focus on creating a valid file with only the necessary values for the header, stream directory and the only 3 streams needed for a Minidump file to be parsed by Mimikatz/Pypykatz: SystemInfo, ModuleList and Memory64List Streams.
 
 ---------------------
 
