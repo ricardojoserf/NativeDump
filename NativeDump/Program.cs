@@ -122,7 +122,11 @@ namespace NativeDump
             // Get Ldr 
             IntPtr ldr_pointer = pebaddress + ldr_offset;
             IntPtr ldr_adress = ReadRemoteIntPtr(hProcess, ldr_pointer);
-
+            if (ldr_adress == IntPtr.Zero) {
+                Console.WriteLine("[-] PEB structure is not readable.");
+                Environment.Exit(0);
+            }
+            
             IntPtr InInitializationOrderModuleList = ldr_adress + inInitializationOrderModuleList_offset;
             Console.WriteLine("[+] InInitializationOrderModuleList:\t\t0x" + InInitializationOrderModuleList.ToString("X"));
             IntPtr next_flink = ReadRemoteIntPtr(hProcess, InInitializationOrderModuleList);
@@ -151,6 +155,13 @@ namespace NativeDump
 
         static void Main(string[] args)
         {
+            // Check binary is correctly compiled
+            if (!Environment.Is64BitProcess)
+            {
+                Console.WriteLine("[-] File must be compiled as 64-byte binary.");
+                Environment.Exit(-1);
+            }
+
             // Get process name
             string procname = "lsass";
             
