@@ -217,10 +217,28 @@ namespace NativeDump
             int aux_size = 0;
             string aux_name = "";
 
+            // DEBUG
+            if (Environment.Is64BitOperatingSystem)
+            {
+                Console.WriteLine("[+] The system is 64-bit.");
+            }
+            else
+            {
+                Console.WriteLine("[+] The system is 32-bit.");
+            }
+            if (IntPtr.Size == 8)
+            {
+                Console.WriteLine("[+] The application is running as a 64-bit executable.");
+            }
+            else if (IntPtr.Size == 4)
+            {
+                Console.WriteLine("[-] The application is running as a 32-bit executable.");
+            }
+
             // DEBUG - Check maximum address
             SYSTEM_INFO sysInfo;
             GetSystemInfo(out sysInfo);
-            Console.WriteLine("[+] Maximum Address: \t" + sysInfo.lpMaximumApplicationAddress);
+            Console.WriteLine("[+] Maximum Address: \t\t\t\t0x" + sysInfo.lpMaximumApplicationAddress.ToString("X"));
 
             // DEBUG
             Console.WriteLine("\n[+] Populating Memory64Info list...");
