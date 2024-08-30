@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using static NativeDump.Win32;
+using static UnreadablePEB.NT;
 
 
-namespace NativeDump
+namespace UnreadablePEB
 {
     internal class CreateFile
     {
@@ -29,7 +29,8 @@ namespace NativeDump
         }
 
 
-        public static OSVERSIONINFOEX getBuildNumber() {
+        public static OSVERSIONINFOEX getBuildNumber()
+        {
             OSVERSIONINFOEX osVersionInfo = new OSVERSIONINFOEX();
             osVersionInfo.dwOSVersionInfoSize = Marshal.SizeOf(typeof(OSVERSIONINFOEX));
             RtlGetVersion(ref osVersionInfo);
@@ -54,7 +55,7 @@ namespace NativeDump
             foreach (ModuleInformation modInfo in moduleInformationList)
             {
                 moduleList_size += (((uint)modInfo.FullPath.Length * 2) + 8);
-            }            
+            }
             // Calculate mem64info offset
             uint mem64info_List_offset = 0x7c + moduleList_size;
 
@@ -86,7 +87,7 @@ namespace NativeDump
             uint pointer_index = 0x7c;                                              // Offset to ModuleList
             pointer_index += (uint)(Marshal.SizeOf(typeof(ModuleListStream)));      // + ModuleListStream struct
             pointer_index += (uint)(108 * moduleInformationList.Count); // (uint) (Marshal.SizeOf(typeof(ModuleInfo)) * moduleInformationList.Count); // + All MouleInfo structs
-            
+
             byte[] moduleinfo_byte_arr = { };
             byte[] dll_unicodepaths_byte_arr = { };
 
@@ -96,7 +97,7 @@ namespace NativeDump
                 module_info_aux.BaseAddress = modInfo.Address;
                 module_info_aux.Size = (uint)modInfo.Size;
                 module_info_aux.PointerName = pointer_index;
-                pointer_index += (uint) (modInfo.FullPath.Length * 2 + 8);
+                pointer_index += (uint)(modInfo.FullPath.Length * 2 + 8);
                 byte[] moduleInfo1_byte_arr = StructToByteArray(module_info_aux);
                 Array.Resize(ref moduleInfo1_byte_arr, moduleInfo1_byte_arr.Length + 4); // Padding needed
                 moduleinfo_byte_arr = JoinByteArrays(moduleinfo_byte_arr, moduleInfo1_byte_arr); // Add to byte array
