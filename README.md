@@ -21,14 +21,14 @@ NativeDump.exe [DUMP_FILE]
 
 ![poc](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_1.png)
 
-The tool has been tested against Windows 10 and 11 devices with the most common security solutions (Microsoft Defender for Endpoints, Crowdstrike...) and is for now undetected. However, it does not work if PPL is enabled or PEB structure is not readable.
+The tool has been tested against Windows 10 and 11 devices with the most common security solutions (Microsoft Defender for Endpoints, Crowdstrike...) and is for now undetected. However, it does not work if PPL is enabled ~~or PEB structure is not readable~~. **Update**: Now it is possible to execute the programs without reading the PEB, check the [peb-unreadable branch](https://github.com/ricardojoserf/NativeDump/tree/peb-unreadable) :)
 
 Some benefits of this technique are:
 - It does not use the well-known dbghelp!MinidumpWriteDump function
 - It only uses functions from Ntdll.dll, so it is possible to bypass API hooking by remapping the library
 - The Minidump file does not have to be written to disk, you can transfer its bytes (encoded or encrypted) to a remote machine
 
-The project has six branches:
+The project has seven branches:
 
 - [main](https://github.com/ricardojoserf/NativeDump/tree/main) - This branch, with the basic implementation in .NET
 
@@ -41,6 +41,8 @@ The project has six branches:
 - [python-flavour](https://github.com/ricardojoserf/NativeDump/tree/python-flavour) - Python implementation with 3 ntdll.dll overwrite methods + Exfiltrate to remote machine 
 
 - [golang-flavour](https://github.com/ricardojoserf/NativeDump/tree/golang-flavour) - Golang implementation with 3 ntdll.dll overwrite methods + Exfiltrate to remote machine 
+
+- [peb-unreadable](https://github.com/ricardojoserf/NativeDump/tree/peb-unreadable) - .NET implementation without reading lsass' PEB structure + 3 ntdll.dll overwrite methods
 
 <br>
 
