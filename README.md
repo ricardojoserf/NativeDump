@@ -32,18 +32,19 @@ The project has seven branches:
 
 - [main](https://github.com/ricardojoserf/NativeDump/tree/main) - This branch, with the basic implementation in .NET
 
-- [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll library using a clean version from a DLL file already on disk
+<!-- - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll library using a clean version from a DLL file already on disk -->
 
 - [remote](https://github.com/ricardojoserf/NativeDump/tree/remote) - Overwrite ntdll.dll + Dynamic function resolution + String AES encryption + XOR-encoding + Exfiltrate to remote machine
 
 - [all-modules](https://github.com/ricardojoserf/NativeDump/tree/all-modules) - Get the information for all modules (not only lsasrv.dll)
 
+- [peb-unreadable](https://github.com/ricardojoserf/NativeDump/tree/peb-unreadable) - .NET implementation without reading lsass' PEB structure + 3 ntdll.dll overwrite methods
+
 - [python-flavour](https://github.com/ricardojoserf/NativeDump/tree/python-flavour) - Python implementation with 3 ntdll.dll overwrite methods + Exfiltrate to remote machine 
 
 - [golang-flavour](https://github.com/ricardojoserf/NativeDump/tree/golang-flavour) - Golang implementation with 3 ntdll.dll overwrite methods + Exfiltrate to remote machine 
 
-- [peb-unreadable](https://github.com/ricardojoserf/NativeDump/tree/peb-unreadable) - .NET implementation without reading lsass' PEB structure + 3 ntdll.dll overwrite methods
-
+- [c-flavour](https://github.com/ricardojoserf/NativeDump/tree/c-flavour) - C/C++ implementation with 3 ntdll.dll overwrite methods 
 <br>
 
 
