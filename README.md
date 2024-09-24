@@ -28,12 +28,10 @@ Some benefits of this technique are:
 - It only uses functions from Ntdll.dll, so it is possible to bypass API hooking by remapping the library
 - The Minidump file does not have to be written to disk, you can transfer its bytes (encoded or encrypted) to a remote machine
 
-The project has seven branches:
+The project has eight branches:
 
 - [main](https://github.com/ricardojoserf/NativeDump/tree/main) - This branch, with the basic implementation in .NET
-
-<!-- - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll library using a clean version from a DLL file already on disk -->
-
+  
 - [remote](https://github.com/ricardojoserf/NativeDump/tree/remote) - Overwrite ntdll.dll + Dynamic function resolution + String AES encryption + XOR-encoding + Exfiltrate to remote machine
 
 - [all-modules](https://github.com/ricardojoserf/NativeDump/tree/all-modules) - Get the information for all modules (not only lsasrv.dll)
@@ -44,9 +42,12 @@ The project has seven branches:
 
 - [golang-flavour](https://github.com/ricardojoserf/NativeDump/tree/golang-flavour) - Golang implementation with 3 ntdll.dll overwrite methods + Exfiltrate to remote machine 
 
-- [c-flavour](https://github.com/ricardojoserf/NativeDump/tree/c-flavour) - C/C++ implementation with 3 ntdll.dll overwrite methods 
-<br>
+- [c-flavour](https://github.com/ricardojoserf/NativeDump/tree/c-flavour) - C/C++ implementation with 3 ntdll.dll overwrite methods
 
+- [bof-flavour](https://github.com/ricardojoserf/NativeDump/tree/bof-flavour) - BOF Files with 3 ntdll.dll overwrite methods 
+<!-- - [ntdlloverwrite](https://github.com/ricardojoserf/NativeDump/tree/ntdlloverwrite) - Overwrite ntdll.dll library using a clean version from a DLL file already on disk -->
+
+<br>
 
 ## Technique in detail: Creating a minimal Minidump file
 
