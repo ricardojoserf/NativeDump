@@ -5,11 +5,7 @@ This branch implements the same functionality as the main branch using BOF files
 - Minidump file generation using only NTAPIS
 - Overwrite the Ntdll.dll library (Optional)
 
-You can execute the files with Cobalt Strike using "bof" or with TrustedSec's [COFFLoader](https://github.com/trustedsec/COFFLoader):
-
-```
-bof nativedump_bof.o <OVERWRITE_TECHNIQUE>
-```
+You can execute the files using Cobalt Strike or TrustedSec's [COFFLoader](https://github.com/trustedsec/COFFLoader):
 
 ```
 COFFLoader64.exe go nativedump_bof.o <OVERWRITE_TECHNIQUE>
@@ -29,10 +25,6 @@ You can use use an argument for overwriting ntdll.dll:
   - Translated to the value "180000001400000064006500620075006700700072006f0063000000" for COFFLoader.
 
 Example to overwrite the library from the ntdll.dll in disk with Cobalt Strike and COFFLoader:
-
-```
-bof nativedump_bof.o disk
-```
 
 ```
 COFFLoader64.exe go nativedump_bof.o 0e0000000a0000006400690073006b000000
