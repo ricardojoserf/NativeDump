@@ -1016,7 +1016,7 @@ void go(IN PCHAR Buffer, IN ULONG Length) {
     ReplaceLibrary(option);
 
     // File names
-    char* dump_fname = "oogie.dmp";    
+    char* dump_fname = "native.dmp";    
 
     // OS Information (Lock)
     OSVERSIONINFOW osvi = GetOSInfo();
