@@ -51,7 +51,7 @@ COFFLoader64.exe go nativedump_bof.o 09000000050000006469736b00
 
 ## Meterpreter's bofloader module
 
-You can run BOFs in your Meterpreter sessions after loading the execute_bof module, using "--format-string z <technique>" to use a ntdll overwrite technique. It is important to interact with the session with a timeout around 60 seconds, so the BOF can finish execution:
+You can run the BOF files in your Meterpreter session after loading the execute_bof module and using "--format-string z " to use a ntdll overwrite technique. It is important to interact with the session with a timeout around 60 seconds, so the BOF can finish execution:
 
 ```
 sessions -i <SESSION-ID> --timeout 60
