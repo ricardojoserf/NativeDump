@@ -796,8 +796,10 @@ ModuleInformation* GetModuleInfo(HANDLE* hProcessOutput, int* module_counterOutp
                 aux_module.size = aux_size;
                 // Find module index
                 int aux_index = find_index_by_name(module_list, module_counter, aux_name);
-                module_list[aux_index] = aux_module;
-
+                // BeaconPrintf(CALLBACK_OUTPUT, "[+] aux_index: \t\t%d\n", aux_index);
+                if (aux_index >= 0 && aux_index < module_counter){
+                    module_list[aux_index] = aux_module;
+                }
                 for (int k = 0; k < module_counter; k++) {
                     if (mbi.BaseAddress == module_list[k].dll_base) {                        
                         MyStrcpy(aux_name, module_list[k].base_dll_name, MAX_PATH);
