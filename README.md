@@ -56,7 +56,7 @@ You can run the BOF files in your Meterpreter session after loading the execute_
 ```
 sessions -i <SESSION-ID> --timeout 60
 load bofloader
-execute_bof nativedump_bof.o <OVERWRITE_TECHNIQUE>
+execute_bof nativedump_bof.o --format-string z <OVERWRITE_TECHNIQUE>
 ```
 
 ![bof4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF4.png)
