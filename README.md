@@ -5,37 +5,53 @@ This branch implements the same functionality as the main branch using BOF files
 - Minidump file generation using only NTAPIS
 - Overwrite the Ntdll.dll library (Optional)
 
-You can execute the files using Cobalt Strike, TrustedSec's [COFFLoader](https://github.com/trustedsec/COFFLoader) or Meterpreter's execute_bof::
+You can execute the files using Cobalt Strike, TrustedSec's [COFFLoader](https://github.com/trustedsec/COFFLoader) or Meterpreter's [bofloader module](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html).
+
+-----------------------------------------
+
+## Cobalt Strike
+
+You can execute the BOF file after importing the aggressor script "nativedump.cna":
+
+```
+nativedump <OVERWRITE_TECHNIQUE>
+``` 
+
+You can use use an argument for overwriting ntdll.dll:
+- "disk": Using a DLL already on disk. The default path is "C:\Windows\System32\ntdll.dll".    
+- "knowndlls": Using the KnownDlls folder.
+- "debugproc": Using a process created in debug mode. The default process is "c:\windows\system32\calc.exe".
+  
+![bof1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF1.png)
+
+-----------------------------------------
+
+## COFFLoader
 
 ```
 COFFLoader64.exe go nativedump_bof.o <OVERWRITE_TECHNIQUE>
 ```
 
-![bof1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF1.png)
+![bof2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF2.png)
 
-You can use use an argument for overwriting ntdll.dll:
-- "disk": Using a DLL already on disk. The default path is "C:\Windows\System32\ntdll.dll".
-  - Translated to the value "0e0000000a0000006400690073006b000000" for COFFLoader.
-    
-- "knowndlls": Using the KnownDlls folder.
-  - Translated to the value "18000000140000006b006e006f0077006e0064006c006c0073000000" for COFFLoader.
-
-- "debugproc": Using a process created in debug mode. The default process is "c:\windows\system32\calc.exe".
-  - Translated to the value "180000001400000064006500620075006700700072006f0063000000" for COFFLoader.
-
-Example to overwrite the library from the ntdll.dll in disk with Cobalt Strike and COFFLoader:
+The argument to overwrite the ntdll library must be generated using COFFLoader's [beacon_generate.py script](https://github.com/trustedsec/COFFLoader/blob/main/beacon_generate.py):
+- "disk": Use the value 09000000050000006469736b00
+- "knowndlls": Use the value 0e0000000a0000006b6e6f776e646c6c7300
+- "debugproc": Use the value 0e0000000a000000646562756770726f6300
+  
+Example using the option "disk":
 
 ```
-COFFLoader64.exe go nativedump_bof.o 0e0000000a0000006400690073006b000000
+COFFLoader64.exe go nativedump_bof.o 09000000050000006469736b00
 ```
 
-![ntdlloverwrite](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF2.png)
+![bof3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF3.png)
 
 --------------------------------------
 
-## Using Meterpreter
+## Meterpreter's bofloader module
 
-You can run BOFs in your Meterpreter sessions after loading the [execute_bof](https://docs.metasploit.com/docs/using-metasploit/advanced/meterpreter/meterpreter-executebof-command.html) module, using "--format-string Z <technique>" to use a ntdll overwrite technique. It is important to interact with the session with a timeout around 60 seconds, so the BOF can finish execution:
+You can run BOFs in your Meterpreter sessions after loading the execute_bof module, using "--format-string z <technique>" to use a ntdll overwrite technique. It is important to interact with the session with a timeout around 60 seconds, so the BOF can finish execution:
 
 ```
 sessions -i <SESSION-ID> --timeout 60
@@ -43,4 +59,4 @@ load bofloader
 execute_bof nativedump_bof.o <OVERWRITE_TECHNIQUE>
 ```
 
-![img11](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF3.png)
+![bof4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF4.png)
