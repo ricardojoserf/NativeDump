@@ -3,7 +3,9 @@ alias nativedump {
         $handle = openf(script_resource("nativedump_bof.o"));
         $data = readb($handle, -1);
         $option = $2;
-        $args = bof_pack($1, "z", $option);
-        btask($1, "Running NativeDump. Option $2 selected");
+        $fname  = $3;
+        $xorkey = $4;
+        $args = bof_pack($1, "zzz", $option, $fname, $xorkey);
+        btask($1, "Running NativeDump. Overwrite option selected: $2");
         beacon_inline_execute($1, $data, "go", $args);
 }

