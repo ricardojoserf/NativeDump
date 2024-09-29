@@ -27,12 +27,12 @@ The first argument is used for overwriting ntdll.dll:
 
 It is also possible to encode the file with a custom XOR key:
 
-![bof1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF1b.png)
+![bof1b](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_BOF1b.png)
 
 And then decode it using Decoder.exe in the attack machine:
 
 ```
-Decoder.exe salaries.xlsx file.dmp NativeDump2024
+Decoder.exe <INPUT_FILE> <OUTPUT_FILE> <XOR_KEY>
 ```
 
 ![c4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/master/images/nativedump/Screenshot_C4.png)
@@ -64,7 +64,7 @@ COFFLoader64.exe go nativedump_bof.o 09000000050000006469736b00
 
 ## Meterpreter's bofloader module
 
-You can run the BOF files in your Meterpreter session after loading the execute_bof module and using "--format-string z " to use a ntdll overwrite technique. It is important to interact with the session with a timeout around 60 seconds, so the BOF can finish execution:
+You can run the BOF files in your Meterpreter session after loading the "bofloader" module and using "--format-string z" to use a ntdll overwrite technique. It is important to interact with the session with a timeout around 60 seconds, so the BOF can finish execution:
 
 ```
 sessions -i <SESSION-ID> --timeout 60
