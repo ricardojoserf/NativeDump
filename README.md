@@ -259,3 +259,8 @@ With this it is possible to traverse process memory by calling:
 After previous steps we have all that is necessary to create the Minidump file. We can create a file locally or send the bytes to a remote machine, with the possibility of encoding or encrypting the bytes before. Some of these possibilities are coded in the [delegates branch](https://github.com/ricardojoserf/NativeDump/tree/delegates), where the file created locally can be encoded with XOR, and in the [remote branch](https://github.com/ricardojoserf/NativeDump/tree/remote), where the file can be encoded with XOR before being sent to a remote machine.
 
 <br>
+
+
+## ⭐ Support This Project by Starring the Repository!
+
+If you find this project helpful or interesting, please consider giving it a star 🌟 on GitHub! :)
