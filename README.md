@@ -261,6 +261,8 @@ After previous steps we have all that is necessary to create the Minidump file. 
 <br>
 
 
+------------------------------------------------------------
+
 ## ⭐ Support This Project by Starring the Repository!
 
 If you find this project helpful or interesting, please consider giving it a star 🌟 on GitHub! :)
