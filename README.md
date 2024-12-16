@@ -42,6 +42,7 @@ You can find the project in different flavours (or languages):
 
 - [rust-flavour](https://github.com/safedv/RustiveDump) - **Rust** implementation by @safedv
 
+- [crystal-flavour](https://github.com/ricardojoserf/NativeDump/tree/crystal-flavour) - **Crystal** implementation with ntdll.dll overwrite capabilities
 
 Other interesting branches using .NET:
 
