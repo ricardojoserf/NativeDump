@@ -14,6 +14,8 @@ CrystalDump is a port of NativeDump written in Crystal lang, designed to dump th
 The tool supports remapping ntdll.dll using a process created in debug mode. For this it uses the NTAPI functions NtQueryInformationProcess, NtReadVirtualMemory, NtProtectVirtualMemory, NtClose, NtTerminateProcess and NtRemoveProcessDebug; and the Kernel32 function CreateProcessW.
 
 
+<br>
+
 ------------------
 
 ## Usage
@@ -24,7 +26,7 @@ crystaldump.exe [-o OUTPUTFILE ] [-r]
 
 - **Output file** (-o, optional): Dump file name
 
-- **Remap ntdll** (-r, optional): Remap the ntdll library
+- **Remap ntdll** (-r, optional): Remap the ntdll.dll library
 
 
 <br>
@@ -55,6 +57,7 @@ crystaldump.exe -r -o document.pptx
 
 ![img3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/crystal_3.png)
 
+<br>
 
 ------------------
 
@@ -66,6 +69,8 @@ To build the binary, use a command like:
 crystal build crystaldump.cr --release
 ```
 
+
+<br>
 
 ------------------
 
