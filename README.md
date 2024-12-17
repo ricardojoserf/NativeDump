@@ -1,32 +1,35 @@
 # CrystalDump
 
-CrystalDump is a port of NativeDump, designed to provide fast and efficient memory dumping capabilities.
+CrystalDump is a port of NativeDump written in Crystal lang, designed to dump the lsass process using only NTAPI functions:
 
-It supports remapping ntdll.dll, getting a clean version of the library from a process created in debug mode.
+![esquema](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/crystal_esquema.png)
+
+- NtOpenProcessToken and NtAdjustPrivilegesToken to enable the SeDebugPrivilege privilege
+- NtGetNextProcess and NtQueryInformationProcess to get a handle to the lsass process
+- RtlGetVersion to get OS information
+- NtReadVirtualMemory and NtQueryInformationProcess to get modules information
+- NtQueryVirtualMemory and NtQueryInformationProcess to get memory regions information
 
 
-## Build
+The tool supports remapping ntdll.dll using a process created in debug mode. For this it uses the NTAPI functions NtQueryInformationProcess, NtReadVirtualMemory, NtProtectVirtualMemory, NtClose, NtTerminateProcess and NtRemoveProcessDebug; and the Kernel32 function CreateProcessW.
 
-```
-crystal build crystaldump.cr --release
-```
 
+------------------
 
 ## Usage
-
 
 ```
 crystaldump.exe [-o OUTPUTFILE ] [-r]
 ```
 
-- **Output file** (optional): Dump file name
+- **Output file** (-o, optional): Dump file name
 
-- **Remap ntdll** (flag, optional): Remap the ntdll library
+- **Remap ntdll** (-r, optional): Remap the ntdll library
 
 
-## Examples
+<br>
 
-By default it creates the "crystal.dmp" file:
+By default it creates a file named "crystal.dmp":
 
 ```
 crystaldump.exe
@@ -44,10 +47,28 @@ crystaldump.exe -r
 ![img2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/crystal_2.png)
 
 
-Using the parameter *-o* changes the output file name:
+The parameter *-o* is used to change the output file name:
 
 ```
 crystaldump.exe -r -o document.pptx
 ```
 
 ![img3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/crystal_3.png)
+
+
+------------------
+
+## Build
+
+To build the binary, use a command like:
+
+```
+crystal build crystaldump.cr --release
+```
+
+
+------------------
+
+## References
+
+- [Crystal Malware](https://rastamouse.me/crystal-malware/) by [Rastamouse](https://twitter.com/_rastamouse)
