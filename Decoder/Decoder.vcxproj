@@ -129,6 +129,9 @@
   <ItemGroup>
     <ClCompile Include="Decoder.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="obfuscate.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

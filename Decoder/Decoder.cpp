@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "obfuscate.h"
 
 // XOR decode function (same as encode because XOR is symmetric)
 uint8_t* decode_bytes(uint8_t* encoded_bytes, int encoded_len, char* key_xor, int key_len) {
@@ -25,7 +25,7 @@ uint8_t* read_file(const char* filename, int* file_size) {
 
     // Use fopen_s for safer file opening
     if (fopen_s(&file, filename, "rb") != 0) {
-        printf("[-] Error: Could not open file %s\n", filename);
+        printf(AY_OBFUSCATE("[-] Error: Could not open file %s\n"), filename);
         return NULL;
     }
 
@@ -37,7 +37,7 @@ uint8_t* read_file(const char* filename, int* file_size) {
     // Allocate memory to store the file contents
     uint8_t* buffer = (uint8_t*)malloc(*file_size);
     if (!buffer) {
-        printf("[-] Error: Memory allocation failed\n");
+        printf(AY_OBFUSCATE("[-] Error: Memory allocation failed\n"));
         fclose(file);
         return NULL;
     }
@@ -55,7 +55,7 @@ int write_file(const char* filename, uint8_t* data, int data_len) {
 
     // Use fopen_s for safer file opening
     if (fopen_s(&file, filename, "wb") != 0) {
-        printf("[-] Error: Could not open file %s\n", filename);
+        printf(AY_OBFUSCATE("[-] Error: Could not open file %s\n"), filename);
         return 1;
     }
 
@@ -68,7 +68,7 @@ int write_file(const char* filename, uint8_t* data, int data_len) {
 
 int main(int argc, char* argv[]) {
     if (argc != 4) {
-        printf("[+] Usage: %s <encoded file> <output file> <xor key>\n", argv[0]);
+        printf(AY_OBFUSCATE("[+] Usage: %s <encoded file> <output file> <xor key>\n"), argv[0]);
         return 1;
     }
 
@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
     uint8_t* decoded_data = decode_bytes(encoded_data, file_size, xor_key, key_len);
     if (!decoded_data) {
         free(encoded_data);
-        printf("[-] Error: Decoding failed\n");
+        printf(AY_OBFUSCATE("[-] Error: Decoding failed\n"));
         return 1;
     }
 
@@ -96,11 +96,11 @@ int main(int argc, char* argv[]) {
     if (write_file(output_filename, decoded_data, file_size) != 0) {
         free(encoded_data);
         free(decoded_data);
-        printf("[-] Error: Writing output file failed\n");
+        printf(AY_OBFUSCATE("[-] Error: Writing output file failed\n"));
         return 1;
     }
 
-    printf("[+] File decoded successfully and saved to %s\n", output_filename);
+    printf(AY_OBFUSCATE("[+] File decoded successfully and saved to %s\n"), output_filename);
 
     // Free allocated memory
     free(encoded_data);

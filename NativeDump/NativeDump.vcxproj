@@ -130,6 +130,10 @@
     <ClCompile Include="miniz.c" />
     <ClCompile Include="NativeDump.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="miniz.h" />
+    <ClInclude Include="obfuscate.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
