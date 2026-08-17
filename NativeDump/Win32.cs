@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 
@@ -14,9 +14,21 @@ namespace NativeDump
         public const uint MemoryBasicInformation = 0;
         public const uint TOKEN_ADJUST_PRIVILEGES = 0x00000020;
         public const uint TOKEN_QUERY = 0x00000008;
+        public const uint GENERIC_READ = 0x80000000;
+        public const uint FILE_SHARE_READ = 0x00000001;
+        public const uint OPEN_EXISTING = 3;
+        public const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
+        public const uint PAGE_READONLY = 0x02;
+        public const uint SEC_IMAGE_NO_EXECUTE = 0x11000000;
+        public const uint FILE_MAP_READ = 4;
+        public const uint PAGE_EXECUTE_WRITECOPY = 0x80;
+        public const uint OBJ_CASE_INSENSITIVE = 0x00000040;
+        public const int SECTION_MAP_READ = 0x0004;
+        public const uint DEBUG_PROCESS = 0x00000001;
+        public const int offset_mappeddll = 4096;
 
 
-        ///////////////// FUNCTIONS /////////////////
+        ///////////////// FUNCTIONS — ntdll.dll /////////////////
         [DllImport("ntdll.dll")]
         public static extern uint NtOpenProcess(ref IntPtr ProcessHandle, uint DesiredAccess, ref OBJECT_ATTRIBUTES ObjectAttributes, ref CLIENT_ID processId);
 
@@ -25,7 +37,7 @@ namespace NativeDump
 
         [DllImport("ntdll.dll")]
         public static extern uint NtQueryVirtualMemory(IntPtr hProcess, IntPtr lpAddress, uint MemoryInformationClass, out MEMORY_BASIC_INFORMATION MemoryInformation, uint MemoryInformationLength, out uint ReturnLength);
-        
+
         [DllImport("ntdll.dll")]
         public static extern uint NtOpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, ref IntPtr TokenHandle);
 
@@ -41,7 +53,39 @@ namespace NativeDump
         [DllImport("ntdll.dll", SetLastError = true)]
         public static extern uint NtQueryInformationProcess(IntPtr processHandle, int processInformationClass, IntPtr pbi, uint processInformationLength, out uint returnLength);
 
-        
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern uint NtOpenSection(ref IntPtr FileHandle, int DesiredAccess, ref OBJECT_ATTRIBUTES_FULL ObjectAttributes);
+
+
+        ///////////////// FUNCTIONS — kernel32.dll /////////////////
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr CreateFileA(string lpFileName, uint dwDesiredAccess, uint dwShareMode, uint lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, uint hTemplateFile);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool VirtualProtect(IntPtr lpAddress, uint dwSize, uint flNewProtect, out uint lpflOldProtect);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr CreateFileMappingA(IntPtr hFile, uint lpFileMappingAttributes, uint flProtect, uint dwMaximumSizeHigh, uint dwMaximumSizeLow, string lpName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr MapViewOfFile(IntPtr hFileMappingObject, uint dwDesiredAccess, uint dwFileOffsetHigh, uint dwFileOffsetLow, uint dwNumberOfBytesToMap);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool CloseHandle(IntPtr handle);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool DebugActiveProcessStop(int dwProcessId);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern uint ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out uint lpNumberOfBytesRead);
+
+
         ///////////////// STRUCTS /////////////////
         [StructLayout(LayoutKind.Sequential)]
         public struct LUID
@@ -108,6 +152,61 @@ namespace NativeDump
             public short wSuiteMask;
             public byte wProductType;
             public byte wReserved;
+        }
+
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct UNICODE_STRING
+        {
+            public ushort Length;
+            public ushort MaximumLength;
+            [MarshalAs(UnmanagedType.LPWStr)] public string Buffer;
+        }
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct OBJECT_ATTRIBUTES_FULL
+        {
+            public uint Length;
+            public IntPtr RootDirectory;
+            public IntPtr ObjectName;
+            public uint Attributes;
+            public IntPtr SecurityDescriptor;
+            public IntPtr SecurityQualityOfService;
+        }
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STARTUPINFO
+        {
+            public int cb;
+            public IntPtr lpReserved;
+            public IntPtr lpDesktop;
+            public IntPtr lpTitle;
+            public int dwX;
+            public int dwY;
+            public int dwXSize;
+            public int dwYSize;
+            public int dwXCountChars;
+            public int dwYCountChars;
+            public int dwFillAttribute;
+            public int dwFlags;
+            public short wShowWindow;
+            public short cbReserved2;
+            public IntPtr lpReserved2;
+            public IntPtr hStdInput;
+            public IntPtr hStdOutput;
+            public IntPtr hStdError;
+        }
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_INFORMATION
+        {
+            public IntPtr hProcess;
+            public IntPtr hThread;
+            public int dwProcessId;
+            public int dwThreadId;
         }
 
 
@@ -200,6 +299,25 @@ namespace NativeDump
         {
             public ulong NumberOfEntries;
             public uint MemoryRegionsBaseAddress;
+        }
+
+
+        ///////////////// HELPERS /////////////////
+        public static OBJECT_ATTRIBUTES_FULL InitializeObjectAttributes(string dll_name, uint Attributes)
+        {
+            OBJECT_ATTRIBUTES_FULL oa = new OBJECT_ATTRIBUTES_FULL();
+            oa.RootDirectory = IntPtr.Zero;
+            UNICODE_STRING objectName = new UNICODE_STRING();
+            objectName.Buffer = dll_name;
+            objectName.Length = (ushort)(dll_name.Length * 2);
+            objectName.MaximumLength = (ushort)(dll_name.Length * 2 + 2);
+            oa.ObjectName = Marshal.AllocHGlobal(Marshal.SizeOf(objectName));
+            Marshal.StructureToPtr(objectName, oa.ObjectName, false);
+            oa.SecurityDescriptor = IntPtr.Zero;
+            oa.SecurityQualityOfService = IntPtr.Zero;
+            oa.Attributes = Attributes;
+            oa.Length = (uint)Marshal.SizeOf(oa);
+            return oa;
         }
     }
 }
