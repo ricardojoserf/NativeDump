@@ -15,6 +15,7 @@ This branch uses the **standard PEB walking approach** (same as main) to find ls
 NativeDump.exe [-o OPTION] [-k PATH] [-f OUTPUT_FILE] [-i IP_ADDRESS] [-p PORT]
 ```
 
+
 ### Arguments
 
 | Argument | Description |
@@ -24,6 +25,26 @@ NativeDump.exe [-o OPTION] [-k PATH] [-f OUTPUT_FILE] [-i IP_ADDRESS] [-p PORT]
 | `-f`, `--file` | Output file name (default: `proc_<PID>.dmp`) |
 | `-i`, `--ip` | Remote IP address for TCP exfiltration |
 | `-p`, `--port` | Remote port for TCP exfiltration |
+
+
+## Expected Output
+
+Check the binary is compiled as x64 and the lsass handle is obtained correctly (for example, no PPL in the system):
+
+![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/Screenshot_native_debug_1.png)
+
+Then the PEB walking:
+
+![img2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/Screenshot_native_debug_2.png)
+
+The memory regions dump:
+
+![img3](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/Screenshot_native_debug_3.png)
+
+The lsasrv.dll information, obtaining OS information and creating the Minidump file:
+
+![img4](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/Screenshot_native_debug_4.png)
+
 
 
 ### Examples
@@ -90,7 +111,6 @@ The debug branch prints detailed information for every step:
 - **Minidump construction**: Header fields, stream directory entries, stream sizes, byte array sizes
 - **Output**: File write confirmation or TCP connection details and bytes sent
 
-
 ## Ntdll Overwrite Methods
 
 | Method | Description |
@@ -98,14 +118,3 @@ The debug branch prints detailed information for every step:
 | `disk` | Maps ntdll.dll from disk using CreateFileA + CreateFileMappingA + MapViewOfFile |
 | `knowndlls` | Opens a clean copy from `\KnownDlls\ntdll.dll` using NtOpenSection + MapViewOfFile |
 | `debugproc` | Creates a process in DEBUG_PROCESS mode and reads its clean ntdll .text section with ReadProcessMemory |
-
-
-## Project Structure
-
-```
-NativeDump/
-  Program.cs      - Main logic: args, SeDebugPrivilege, PEB walking, memory loop
-  Win32.cs         - P/Invoke declarations and struct definitions
-  CreateFile.cs    - Minidump construction, file save, TCP send
-  Overwrite.cs     - Ntdll overwrite methods (disk, knowndlls, debugproc)
-```
